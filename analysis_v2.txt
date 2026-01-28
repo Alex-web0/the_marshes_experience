@@ -1,0 +1,25 @@
+﻿Analyzing the_marshes_experience...                             
+
+  error - Classes can only mix in mixins and classes - lib\game\components.dart:11:50 - mixin_of_non_class
+  error - Undefined name 'game' - lib\game\components.dart:26:9 - undefined_identifier
+  error - Undefined name 'game' - lib\game\components.dart:45:20 - undefined_identifier
+  error - Undefined name 'game' - lib\game\components.dart:54:5 - undefined_identifier
+  error - Undefined name 'game' - lib\game\components.dart:57:5 - undefined_identifier
+  error - Undefined name 'game' - lib\game\components.dart:65:7 - undefined_identifier
+  error - Undefined name 'game' - lib\game\components.dart:74:25 - undefined_identifier
+  error - Classes can only mix in mixins and classes - lib\game\components.dart:90:64 - mixin_of_non_class
+  error - Undefined name 'game' - lib\game\components.dart:106:10 - undefined_identifier
+  error - Undefined name 'game' - lib\game\components.dart:109:13 - undefined_identifier
+   info - Parameter 'color' could be a super parameter - lib\game\components.dart:123:3 - use_super_parameters
+  error - Undefined name 'game' - lib\game\components.dart:146:5 - undefined_identifier
+  error - Undefined name 'game' - lib\game\components.dart:147:8 - undefined_identifier
+warning - The declaration 'heritageRepository' isn't referenced - lib\game\components.dart:154:27 - unused_element
+warning - The value of the field '_gameOver' isn't used - lib\main.dart:44:8 - unused_field
+warning - Unused import: 'package:url_launcher/url_launcher.dart' - lib\ui\ui_layers.dart:5:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\ui_layers.dart:38:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\ui_layers.dart:40:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\ui_layers.dart:45:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\ui_layers.dart:46:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\ui_layers.dart:112:31 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\ui_layers.dart:114:50 - deprecated_member_use
+

@@ -1,0 +1,12 @@
+﻿Analyzing the_marshes_experience...                             
+
+   info - Parameter 'color' could be a super parameter - lib\game\components.dart:123:3 - use_super_parameters
+warning - The value of the field '_gameOver' isn't used - lib\main.dart:44:8 - unused_field
+warning - Unused import: 'package:url_launcher/url_launcher.dart' - lib\ui\ui_layers.dart:5:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\ui_layers.dart:38:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\ui_layers.dart:40:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\ui_layers.dart:45:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\ui_layers.dart:46:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\ui_layers.dart:112:31 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\ui_layers.dart:114:50 - deprecated_member_use
+
