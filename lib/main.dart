@@ -1,5 +1,7 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:the_marshes_experience/firebase_options.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'game/marshes_game.dart';
 import 'ui/ui_layers.dart';
@@ -7,6 +9,7 @@ import 'ui/game_over_menu.dart';
 import 'ui/team_page.dart';
 import 'ui/pause_menu.dart';
 import 'ui/mute_button.dart';
+import 'ui/multiplayer_page.dart';
 import 'data/heritage_repository.dart';
 import 'data/score_repository.dart';
 import 'data/audio_manager.dart';
@@ -15,6 +18,11 @@ import 'domain/game_stats.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AudioManager().initialize();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const MyApp());
 }
 
@@ -48,6 +56,7 @@ class _GameContainerState extends State<GameContainer> {
   // UI State
   bool _showMenu = true;
   bool _showTeamPage = false; // Team page state
+  bool _showMultiplayerPage = false; // Multiplayer page state
   bool _showPauseMenu = false; // Pause menu state
   HeritageFact? _activeStory;
   int _score = 0;
@@ -190,6 +199,20 @@ class _GameContainerState extends State<GameContainer> {
     });
   }
 
+  void _showMultiplayer() {
+    setState(() {
+      _showMultiplayerPage = true;
+      _showMenu = false;
+    });
+  }
+
+  void _hideMultiplayer() {
+    setState(() {
+      _showMultiplayerPage = false;
+      _showMenu = true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -270,9 +293,10 @@ class _GameContainerState extends State<GameContainer> {
                 ),
 
               // 3. MENU LAYER (Liquid Glass)
-              if (_showMenu && !_showTeamPage)
+              if (_showMenu && !_showTeamPage && !_showMultiplayerPage)
                 LiquidGlassMenu(
                   onPlay: _startGame,
+                  onMultiplayer: _showMultiplayer,
                   onTeam: _showTeam,
                   onVisitWebsite: () =>
                       launchUrl(Uri.parse('https://heritage.alqaba.com')),
@@ -280,7 +304,7 @@ class _GameContainerState extends State<GameContainer> {
                 ),
 
               // 3.1. MUTE BUTTON (Main Menu)
-              if (_showMenu && !_showTeamPage)
+              if (_showMenu && !_showTeamPage && !_showMultiplayerPage)
                 Positioned(
                   bottom: 120,
                   left: 0,
@@ -296,6 +320,13 @@ class _GameContainerState extends State<GameContainer> {
               if (_showTeamPage)
                 TeamPage(
                   onBack: _hideTeam,
+                  onButtonSound: _game.playButtonSound,
+                ),
+
+              // 3.45. MULTIPLAYER PAGE
+              if (_showMultiplayerPage)
+                MultiplayerPage(
+                  onBack: _hideMultiplayer,
                   onButtonSound: _game.playButtonSound,
                 ),
 
