@@ -92,12 +92,12 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
     add(parallax);
 
     // 2. Add Player
-    player = BoatPlayer();
-    add(player);
+    // player = BoatPlayer(); -> Moved to startGame to prevent premature spawning
+    // add(player);
 
     // 3. Spawning Logic
     _spawnTimer = Timer(1.5, repeat: true, onTick: _spawnObject);
-    _spawnTimer.start();
+    // _spawnTimer.start(); -> Moved to startGame
 
     // 4. Sensors
     _sensorSubscription = accelerometerEventStream().listen((event) {
@@ -138,21 +138,47 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
   // --- Audio Management ---
   void playBackgroundMusic() {
     if (!AudioManager().isMuted) {
-      FlameAudio.bgm.play('music/bg_music_game.mp3', volume: 0.5);
+      try {
+        FlameAudio.bgm
+            .play('music/bg_music_game.mp3', volume: 0.5)
+            .catchError((e) {
+          debugPrint("Error playing background music: $e");
+        });
+      } catch (e) {
+        debugPrint("Error playing background music (sync): $e");
+      }
     }
   }
 
   void stopBackgroundMusic() {
-    FlameAudio.bgm.stop();
+    try {
+      FlameAudio.bgm.stop().catchError((e) {
+        debugPrint("Error stopping music: $e");
+      });
+    } catch (e) {
+      debugPrint("Error stopping music (sync): $e");
+    }
   }
 
   void pauseBackgroundMusic() {
-    FlameAudio.bgm.pause();
+    try {
+      FlameAudio.bgm.pause().catchError((e) {
+        debugPrint("Error pausing music: $e");
+      });
+    } catch (e) {
+      debugPrint("Error pausing music (sync): $e");
+    }
   }
 
   void resumeBackgroundMusic() {
     if (!AudioManager().isMuted) {
-      FlameAudio.bgm.resume();
+      try {
+        FlameAudio.bgm.resume().catchError((e) {
+          debugPrint("Error resuming music: $e");
+        });
+      } catch (e) {
+        debugPrint("Error resuming music (sync): $e");
+      }
     }
   }
 
@@ -162,8 +188,16 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
       final rand = Random();
       final musicTrack =
           rand.nextBool() ? 'music/bg_music_1.mp3' : 'music/bg_music_2.mp3';
-      FlameAudio.bgm
-          .play(musicTrack, volume: 0.3); // Lower volume for ambient menu music
+      try {
+        FlameAudio.bgm
+            .play(musicTrack,
+                volume: 0.3) // Lower volume for ambient menu music
+            .catchError((e) {
+          debugPrint("Error playing menu music: $e");
+        });
+      } catch (e) {
+        debugPrint("Error playing menu music (sync): $e");
+      }
     }
   }
 
@@ -225,10 +259,13 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
   void update(double dt) {
     if (!isPlaying && !isAutoPilot) return; // Paused for Dialog
 
-    super.update(dt);
-    _spawnTimer.update(dt);
+    super.update(dt); // Updates children components (parallax, player if added)
 
-    // Increase difficulty/speed
+    // Only update spawner when actually playing
+    if (isPlaying) {
+      _spawnTimer.update(dt);
+    }
+
     // Increase difficulty/speed
     if (isPlaying) {
       // Recovery Logic: If below target speed, accelerate faster
@@ -242,13 +279,12 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
 
       distanceTraveled += currentSpeed * dt / 100;
       onScoreUpdate(distanceTraveled.toInt());
-    } else if (isAutoPilot) {
-      // Maybe scroll background but don't add score?
-      // For now, no score update in menu mode
     }
   }
 
   void _spawnObject() {
+    if (!isPlaying) return; // double check
+
     final rand = Random();
     int lane = rand.nextInt(laneCount);
     double xPos = lane * laneWidth + (laneWidth / 2);
@@ -275,6 +311,9 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
       KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
     if (!isPlaying) return KeyEventResult.ignored;
 
+    // Guard against player not being initialized/added yet
+    if (!children.contains(player)) return KeyEventResult.ignored;
+
     if (keysPressed.contains(LogicalKeyboardKey.arrowLeft)) {
       player.moveLeft();
       return KeyEventResult.handled;
@@ -289,6 +328,9 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
   // Sensor handling will be injected from main via a listener or handled here if we want direct stream access
   void handleTilt(double xTilt) {
     if (!isPlaying) return;
+    // Guard against player not being initialized/added yet
+    if (!children.contains(player)) return;
+
     // Continuous seamless steering
     player.updateTilt(xTilt);
   }
@@ -307,18 +349,27 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
     onFishCountUpdate(0);
     distanceTraveled = 0;
 
-    // Remove old player if it still exists (it shouldn't if game over processed?)
-    // But to be safe, we check validity.
-    // Ideally we create a new one to be fresh.
-    if (player.parent != null)
-      player.removeFromParent();
-    else if (player.isMounted) player.removeFromParent();
+    // Initialize player if first time or recreate
+    // We didn't init in onLoad, so we do it here.
+    // If we're restarting, remove old one first.
+    // However, player variable might be unassigned if first run.
+    // We can't check 'player.parent' if player isn't assigned.
+
+    // Check if player is assigned by using a try-catch or nullable check if it was nullable.
+    // Since it's late, we assume startGame is the first place it's ever touched after onLoad skipped it.
+    // But wait, resetToMenu might have been called?
+
+    // Safer approach: Remove any existing BoatPlayer from children
+    children.whereType<BoatPlayer>().forEach((e) => e.removeFromParent());
 
     player = BoatPlayer();
     add(player);
 
     children.whereType<Obstacle>().forEach((e) => e.removeFromParent());
     children.whereType<Collectible>().forEach((e) => e.removeFromParent());
+
+    // Start Spawning
+    _spawnTimer.start();
 
     // Start background music when game starts
     playBackgroundMusic();
@@ -362,6 +413,9 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
     if (player.parent != null) player.removeFromParent();
     children.whereType<Obstacle>().forEach((e) => e.removeFromParent());
     children.whereType<Collectible>().forEach((e) => e.removeFromParent());
+
+    // Stop spawning
+    _spawnTimer.stop();
 
     // Stop music when returning to menu
     stopBackgroundMusic();

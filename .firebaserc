@@ -1,0 +1,23 @@
+{
+  "projects": {
+    "default": "the-marshes-experience"
+  },
+  "targets": {
+    "the-marshes-experience": {
+      "hosting": {
+        "predeploy": "flutter build web",
+        "ignore": [
+          "firebase.json",
+          "**/.*",
+          "**/node_modules/**"
+        ],
+        "the-marshes-experience-hosting": {
+          "site": "the-marshes-experience",
+          "targetIds": [
+            "the-marshes-experience-hosting"
+          ]
+        }
+      }
+    }
+  }
+}

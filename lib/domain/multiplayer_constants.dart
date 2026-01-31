@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-// Multiplayer game constants
-const int kMaxPlayers = kDebugMode ? 2 : 8;
+class MultiplayerConstants {
+  static const int kMaxPlayers = kDebugMode ? 2 : 8;
+}

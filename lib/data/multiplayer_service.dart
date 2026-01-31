@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart'; // For debugPrint
 import '../domain/multiplayer_models.dart';
 import '../domain/game_status.dart';
 import '../domain/multiplayer_constants.dart';
@@ -18,93 +19,89 @@ class MultiplayerService {
   String? get currentGameId => _currentGameId;
   String? get currentPlayerId => _currentPlayerId;
 
-  // Generate a 6-character alphanumeric game code with 3 chars from server timestamp
-  Future<String> _generateGameCode() async {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed ambiguous chars
-    final random = Random();
-
-    // Get server timestamp from Firebase
-    final serverTimeRef = _database.child('.info/serverTimeOffset');
-    final snapshot = await serverTimeRef.get();
-    final serverOffset = (snapshot.value as int?) ?? 0;
-    final serverTime = DateTime.now().millisecondsSinceEpoch + serverOffset;
-
-    // Use last 3 digits of timestamp and convert to chars
-    final timeString = serverTime.toString();
-    final timeChars = timeString.substring(timeString.length - 3);
-
-    // Convert timestamp digits to alphanumeric chars
-    final timestampPart = timeChars.split('').map((digit) {
-      final index = int.parse(digit);
-      return chars[index % chars.length];
-    }).join();
-
-    // Generate 3 random chars
-    final randomPart =
-        List.generate(3, (index) => chars[random.nextInt(chars.length)]).join();
-
-    // Combine: 3 timestamp chars + 3 random chars
-    return timestampPart + randomPart;
-  }
-
   // Generate unique player ID
   String _generatePlayerId() {
     return 'player_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(9999)}';
   }
 
   // Create a new game
-  Future<MultiplayerGame> createGame(String playerName) async {
-    final gameId = _database.child('games').push().key!;
-    final gameCode = await _generateGameCode();
-    final playerId = _generatePlayerId();
+  Future<MultiplayerGame> createGame(
+      {required String name,
+      required String code,
+      RaceLength raceLength = RaceLength.short,
+      int? maxPlayers}) async {
+    try {
+      debugPrint("Creating game for player: $name with code: $code");
+      final gameId = _database.child('games').push().key!;
+      final playerId = _generatePlayerId(); // Kept original playerId generation
 
-    final game = MultiplayerGame(
-      gameId: gameId,
-      code: gameCode,
-      status: GameStatus.waiting,
-      creatorId: playerId,
-      maxPlayers: kMaxPlayers,
-      currentPlayers: 1,
-      players: {
-        playerId: MultiplayerPlayer(
-          playerId: playerId,
-          name: playerName,
-          isReady: false,
-          joinedAt: DateTime.now().millisecondsSinceEpoch,
-        ),
-      },
-    );
+      final newGame = MultiplayerGame(
+        gameId: gameId,
+        code: code,
+        status: GameStatus.waiting,
+        creatorId: playerId,
+        maxPlayers: maxPlayers ?? MultiplayerConstants.kMaxPlayers,
+        currentPlayers: 1,
+        players: {
+          playerId: MultiplayerPlayer(
+            playerId: playerId,
+            name: name,
+            isReady: true,
+            joinedAt: DateTime.now().millisecondsSinceEpoch,
+          ),
+        },
+        hazards: {},
+        raceLength: raceLength,
+      );
 
-    await _database.child('games/$gameId').set(game.toMap());
-    await _database.child('games/$gameId/players/$playerId').set(
-          game.players[playerId]!.toMap(),
-        );
+      debugPrint("Saving game to DB...");
+      await _database.child('games/$gameId').set(newGame.toMap());
+      _currentGameId = gameId;
+      _currentPlayerId = playerId;
 
-    _currentGameId = gameId;
-    _currentPlayerId = playerId;
-
-    return game;
+      debugPrint("Game created! ID: $gameId");
+      return newGame;
+    } catch (e) {
+      debugPrint("Error in createGame inner: $e");
+      rethrow;
+    }
   }
 
   // Find game by code
   Future<String?> findGameByCode(String code) async {
-    final query = await _database
-        .child('games')
-        .orderByChild('code')
-        .equalTo(code.toUpperCase())
-        .once();
+    try {
+      final query = await _database
+          .child('games')
+          .orderByChild('code')
+          .equalTo(code.toUpperCase())
+          .once();
 
-    if (query.snapshot.value != null) {
-      final games = query.snapshot.value as Map<dynamic, dynamic>;
-      final gameId = games.keys.first;
-      final gameData = games[gameId] as Map<dynamic, dynamic>;
+      if (query.snapshot.value != null) {
+        final games = query.snapshot.value as Map<dynamic, dynamic>;
 
-      // Check if game is joinable
-      if (gameData['status'] == GameStatus.waiting.name &&
-          (gameData['currentPlayers'] ?? 0) <
-              (gameData['maxPlayers'] ?? kMaxPlayers)) {
-        return gameId.toString();
+        // Sort keys to ensure we check the newest games first
+        // Firebase Push IDs are chronologically sorted
+        final sortedKeys = games.keys.toList()..sort();
+
+        // Iterate backwards (Newest -> Oldest)
+        for (var key in sortedKeys.reversed) {
+          final gameData = games[key];
+          if (gameData == null || gameData is! Map) continue;
+
+          final status = gameData['status'];
+          final currentPlayers = (gameData['currentPlayers'] as int?) ?? 0;
+          final maxPlayers = (gameData['maxPlayers'] as int?) ??
+              MultiplayerConstants.kMaxPlayers;
+
+          // Prioritize games that are WAITING and have space
+          if (status == GameStatus.waiting.name &&
+              currentPlayers < maxPlayers) {
+            return key.toString();
+          }
+        }
       }
+    } catch (e) {
+      debugPrint("Error finding game: $e");
     }
     return null;
   }
@@ -122,7 +119,8 @@ class MultiplayerService {
     final currentPlayers = (snapshot.value as int?) ?? 0;
 
     final maxPlayersSnapshot = await gameRef.child('maxPlayers').get();
-    final maxPlayers = (maxPlayersSnapshot.value as int?) ?? kMaxPlayers;
+    final maxPlayers =
+        (maxPlayersSnapshot.value as int?) ?? MultiplayerConstants.kMaxPlayers;
 
     if (currentPlayers >= maxPlayers) {
       return null; // Game is full
@@ -142,7 +140,10 @@ class MultiplayerService {
 
     // Auto-start game if lobby is now full
     if (newPlayerCount >= maxPlayers) {
-      await gameRef.child('status').set(GameStatus.playing.name);
+      await gameRef.update({
+        'status': GameStatus.playing.name,
+        'startedAt': ServerValue.timestamp,
+      });
     }
 
     _currentGameId = gameId;
@@ -183,6 +184,7 @@ class MultiplayerService {
     int? lives,
     int? fishCount,
     int? storyCount,
+    int? obstaclesHit,
     int? lane,
     double? distance,
     double? x,
@@ -195,18 +197,77 @@ class MultiplayerService {
     if (lives != null) updates['lives'] = lives;
     if (fishCount != null) updates['fishCount'] = fishCount;
     if (storyCount != null) updates['storyCount'] = storyCount;
-    if (lane != null && distance != null && x != null && y != null) {
-      updates['position'] = {
-        'lane': lane,
-        'distance': distance,
-        'x': x,
-        'y': y,
-      };
-    }
+    if (obstaclesHit != null) updates['obstaclesHit'] = obstaclesHit;
+
+    // Update position fields individually
+    if (lane != null) updates['position/lane'] = lane;
+    if (distance != null) updates['position/distance'] = distance;
+    if (x != null) updates['position/x'] = x;
+    if (y != null) updates['position/y'] = y;
 
     await _database
         .child('games/$_currentGameId/players/$_currentPlayerId')
         .update(updates);
+  }
+
+  Future<void> finishGame(String winnerId) async {
+    if (_currentGameId == null) return;
+    await _database.child('games/$_currentGameId').update({
+      'status': GameStatus.ended.name, // Changed to .name for consistency
+      'finishedAt': DateTime.now().millisecondsSinceEpoch,
+      'winnerId': winnerId,
+    });
+  }
+
+  Future<void> restartGame() async {
+    if (_currentGameId == null) return;
+
+    // Reset game state
+    // We want to keep players but reset their stats
+
+    final snapshot = await _database.child('games/$_currentGameId').get();
+    if (!snapshot.exists) return;
+
+    final gameData = snapshot.value as Map;
+    if (gameData['players'] == null) return;
+    final playersData = gameData['players'] as Map<dynamic, dynamic>;
+
+    final updates = <String, dynamic>{
+      'status': GameStatus.waiting.name, // Changed to .name for consistency
+      'startedAt': 0,
+      'finishedAt': null,
+      'winnerId': null,
+      'hazards': null, // Clear hazards
+    };
+
+    // Reset each player
+    playersData.forEach((key, value) {
+      updates['players/$key/score'] = 0;
+      updates['players/$key/fishCount'] = 0;
+      updates['players/$key/lives'] = 3;
+      updates['players/$key/storyCount'] = 0;
+      updates['players/$key/obstaclesHit'] = 0;
+      updates['players/$key/isReady'] = false;
+      updates['players/$key/position'] = null;
+    });
+
+    await _database.child('games/$_currentGameId').update(updates);
+  }
+
+  // Add a hazard to the game
+  Future<void> addHazard({required int lane, required double distance}) async {
+    if (_currentGameId == null || _currentPlayerId == null) return;
+
+    final hazardRef = _database.child('games/$_currentGameId/hazards').push();
+    final hazard = MultiplayerHazard(
+      id: hazardRef.key!,
+      placedBy: _currentPlayerId!,
+      lane: lane,
+      distance: distance,
+      createdAt: DateTime.now().millisecondsSinceEpoch,
+    );
+
+    await hazardRef.set(hazard.toMap());
   }
 
   // Start the game (creator only)
@@ -224,15 +285,15 @@ class MultiplayerService {
 
     final gameRef = _database.child('games/$_currentGameId');
 
-    // Remove player
-    await gameRef.child('players/$_currentPlayerId').remove();
+    // Mark player as offline instead of removing
+    await gameRef.child('players/$_currentPlayerId/isOnline').set(false);
 
-    // Update player count
+    // Update player count (online players)
     final snapshot = await gameRef.child('currentPlayers').get();
     final currentPlayers = (snapshot.value as int?) ?? 1;
     await gameRef.child('currentPlayers').set(max(0, currentPlayers - 1));
 
-    // If no players left, delete game
+    // If no players left online, delete game
     if (currentPlayers <= 1) {
       await gameRef.remove();
     }

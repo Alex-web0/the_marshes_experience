@@ -2,6 +2,7 @@
 enum GameStatus {
   waiting,
   playing,
+  ended,
   finished;
 
   String toJson() => name;

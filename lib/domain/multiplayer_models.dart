@@ -2,6 +2,68 @@
 import 'game_status.dart';
 import 'multiplayer_constants.dart';
 
+enum RaceLength { short, medium, long }
+
+extension RaceLengthExtension on RaceLength {
+  int get distance {
+    switch (this) {
+      case RaceLength.short:
+        return 800;
+      case RaceLength.medium:
+        return 3600;
+      case RaceLength.long:
+        return 7200;
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case RaceLength.short:
+        return 'Short (800m)';
+      case RaceLength.medium:
+        return 'Medium (3600m)';
+      case RaceLength.long:
+        return 'Long (7200m)';
+    }
+  }
+}
+
+class MultiplayerHazard {
+  final String id;
+  final String placedBy;
+  final int lane;
+  final double distance;
+  final int createdAt;
+
+  MultiplayerHazard({
+    required this.id,
+    required this.placedBy,
+    required this.lane,
+    required this.distance,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'placedBy': placedBy,
+      'lane': lane,
+      'distance': distance,
+      'createdAt': createdAt,
+    };
+  }
+
+  factory MultiplayerHazard.fromMap(String id, Map<dynamic, dynamic> map) {
+    return MultiplayerHazard(
+      id: id,
+      placedBy: map['placedBy'] ?? '',
+      lane: (map['lane'] as num?)?.toInt() ?? 0,
+      distance: (map['distance'] as num?)?.toDouble() ?? 0.0,
+      createdAt: (map['createdAt'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
 class MultiplayerGame {
   final String gameId;
   final String code;
@@ -10,8 +72,11 @@ class MultiplayerGame {
   final int maxPlayers;
   final int currentPlayers;
   final Map<String, MultiplayerPlayer> players;
-  final int? startedAt;
+  final int startedAt;
   final int? finishedAt;
+  final Map<String, MultiplayerHazard> hazards;
+  final RaceLength raceLength;
+  final String? winnerId;
 
   MultiplayerGame({
     required this.gameId,
@@ -21,8 +86,11 @@ class MultiplayerGame {
     required this.maxPlayers,
     required this.currentPlayers,
     required this.players,
-    this.startedAt,
+    this.startedAt = 0,
     this.finishedAt,
+    this.hazards = const {},
+    this.raceLength = RaceLength.short,
+    this.winnerId,
   });
 
   factory MultiplayerGame.fromMap(String gameId, Map<dynamic, dynamic> map) {
@@ -35,6 +103,22 @@ class MultiplayerGame {
       });
     }
 
+    final hazardsMap = <String, MultiplayerHazard>{};
+    if (map['hazards'] != null) {
+      final hazardsData = map['hazards'] as Map<dynamic, dynamic>;
+      hazardsData.forEach((key, value) {
+        hazardsMap[key.toString()] =
+            MultiplayerHazard.fromMap(key.toString(), value);
+      });
+    }
+
+    RaceLength length = RaceLength.short;
+    if (map['raceLength'] != null) {
+      length = RaceLength.values.firstWhere(
+          (e) => e.toString() == map['raceLength'],
+          orElse: () => RaceLength.short);
+    }
+
     return MultiplayerGame(
       gameId: gameId,
       code: map['code'] ?? '',
@@ -42,11 +126,14 @@ class MultiplayerGame {
           ? GameStatus.fromJson(map['status'])
           : GameStatus.waiting,
       creatorId: map['creatorId'] ?? '',
-      maxPlayers: map['maxPlayers'] ?? kMaxPlayers,
+      maxPlayers: map['maxPlayers'] ?? MultiplayerConstants.kMaxPlayers,
       currentPlayers: map['currentPlayers'] ?? 0,
       players: playersMap,
-      startedAt: map['startedAt'],
+      startedAt: map['startedAt'] ?? 0,
       finishedAt: map['finishedAt'],
+      hazards: hazardsMap,
+      raceLength: length,
+      winnerId: map['winnerId'],
     );
   }
 
@@ -59,6 +146,8 @@ class MultiplayerGame {
       'currentPlayers': currentPlayers,
       'startedAt': startedAt,
       'finishedAt': finishedAt,
+      'raceLength': raceLength.toString(),
+      'winnerId': winnerId,
     };
   }
 }
@@ -67,10 +156,12 @@ class MultiplayerPlayer {
   final String playerId;
   final String name;
   final bool isReady;
+  final bool isOnline;
   final int score;
   final int lives;
   final int fishCount;
   final int storyCount;
+  final int obstaclesHit;
   final PlayerPosition? position;
   final int joinedAt;
 
@@ -78,10 +169,12 @@ class MultiplayerPlayer {
     required this.playerId,
     required this.name,
     this.isReady = false,
+    this.isOnline = true,
     this.score = 0,
     this.lives = 3,
     this.fishCount = 0,
     this.storyCount = 0,
+    this.obstaclesHit = 0,
     this.position,
     required this.joinedAt,
   });
@@ -103,10 +196,12 @@ class MultiplayerPlayer {
       playerId: playerId,
       name: map['name'] ?? 'Player',
       isReady: map['isReady'] ?? false,
+      isOnline: map['isOnline'] ?? true,
       score: map['score'] ?? 0,
       lives: map['lives'] ?? 3,
       fishCount: map['fishCount'] ?? 0,
       storyCount: map['storyCount'] ?? 0,
+      obstaclesHit: map['obstaclesHit'] ?? 0,
       position: pos,
       joinedAt: map['joinedAt'] ?? DateTime.now().millisecondsSinceEpoch,
     );
@@ -116,6 +211,7 @@ class MultiplayerPlayer {
     return {
       'name': name,
       'isReady': isReady,
+      'isOnline': isOnline,
       'score': score,
       'lives': lives,
       'fishCount': fishCount,
