@@ -33,18 +33,19 @@ _sensorSubscription?.cancel();
 ```dart
 void handleTilt(double xTilt) {
   if (!isPlaying) return;
-  // Simple threshold steering
-  if (xTilt > 2) player.moveRight();
-  if (xTilt < -2) player.moveLeft();
+  // Continuous seamless steering
+  player.updateTilt(xTilt);
 }
 ```
 
 ### How It Works
 
-1. **Sensor Stream**: The game subscribes to `accelerometerEventStream()` from the `sensors_plus` package
-2. **X-Axis Reading**: Only the X-axis tilt is used (left/right tilting of the phone)
-3. **Threshold-Based**: Uses a threshold of ±2 to prevent accidental movements
-4. **Continuous Monitoring**: The stream continuously monitors tilt while the game is running
+1.  **Sensor Stream**: The game subscribes to `accelerometerEventStream()`
+2.  **Seamless Movement**: The boat moves continuously based on the tilt angle, overriding the lane system.
+3.  **Reversed Logic**: 
+    - Tilt Left (Positive X) -> Boat moves Left
+    - Tilt Right (Negative X) -> Boat moves Right
+4.  **Clamping**: The boat is prevented from moving off-screen.
 
 ### Control Behavior
 

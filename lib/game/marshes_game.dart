@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import '../data/heritage_repository.dart';
 import '../data/audio_manager.dart';
 import 'components.dart';
@@ -57,7 +58,7 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
     required this.onStoryCountUpdate,
     this.onPauseTriggered,
   }) : super() {
-    debugMode = true; // Enable debug mode to show hitboxes
+    debugMode = kDebugMode; // Enable debug mode to show hitboxes
   }
 
   @override
@@ -288,9 +289,8 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
   // Sensor handling will be injected from main via a listener or handled here if we want direct stream access
   void handleTilt(double xTilt) {
     if (!isPlaying) return;
-    // Simple threshold steering
-    if (xTilt > 2) player.moveRight();
-    if (xTilt < -2) player.moveLeft();
+    // Continuous seamless steering
+    player.updateTilt(xTilt);
   }
 
   // Methods to control game state

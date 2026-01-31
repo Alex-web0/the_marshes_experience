@@ -32,6 +32,10 @@ class BoatPlayer extends PositionComponent
   double transitionSpeed = 500.0; // Pixels per second
   bool isTransitioning = false;
 
+  // Seamless tilt control
+  double _currentTilt = 0;
+  static const double kTiltSensitivity = 200.0;
+
   BoatPlayer()
       : super(
           size: Vector2(kPlayerWidth, kPlayerHeight),
@@ -100,8 +104,18 @@ class BoatPlayer extends PositionComponent
   void update(double dt) {
     super.update(dt);
 
-    // Smooth lane transition
-    if (isTransitioning && (x - targetX).abs() > 1) {
+    // Seamless tilt movement overrides lane transition
+    if (_currentTilt.abs() > 0.5) {
+      isTransitioning = false; // Cancel any lane transition
+      // Reverse steering: Positive X (Left Tilt) -> Move Left (Decrease X)
+      x -= _currentTilt * kTiltSensitivity * dt;
+      
+      // Clamp to screen
+      final halfWidth = size.x / 2;
+      x = x.clamp(halfWidth, game.size.x - halfWidth);
+    } 
+    // Fallback to lane logic (e.g. for keyboard)
+    else if (isTransitioning && (x - targetX).abs() > 1) {
       double direction = targetX > x ? 1 : -1;
       double moveAmount = transitionSpeed * dt * direction;
 
@@ -116,6 +130,10 @@ class BoatPlayer extends PositionComponent
       x = targetX;
       isTransitioning = false;
     }
+  }
+
+  void updateTilt(double tilt) {
+    _currentTilt = tilt;
   }
 
   void moveLeft() {
