@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "798073935041",
+    "firebase_url": "https://the-marshes-experience-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "the-marshes-experience",
+    "storage_bucket": "the-marshes-experience.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:798073935041:android:be6822fdffe404c2f2b040",
+        "android_client_info": {
+          "package_name": "com.example.the_marshes_experience"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBIgTrsRdD7cLLAU0LQ_o6wcLSuXP_vQRo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

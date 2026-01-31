@@ -56,12 +56,14 @@ class LiquidGlassContainer extends StatelessWidget {
 // --- Main Menu Overlay ---
 class LiquidGlassMenu extends StatelessWidget {
   final VoidCallback onPlay;
+  final VoidCallback onMultiplayer;
   final VoidCallback onTeam;
   final VoidCallback onVisitWebsite;
   final VoidCallback? onButtonSound; // Optional callback for button sounds
 
   const LiquidGlassMenu({
     required this.onPlay,
+    required this.onMultiplayer,
     required this.onTeam,
     required this.onVisitWebsite,
     this.onButtonSound,
@@ -91,6 +93,11 @@ class LiquidGlassMenu extends StatelessWidget {
             const SizedBox(height: 50),
             _GlassButton(
                 label: "PLAY", onTap: onPlay, onButtonSound: onButtonSound),
+            const SizedBox(height: 20),
+            _GlassButton(
+                label: "MULTIPLAYER",
+                onTap: onMultiplayer,
+                onButtonSound: onButtonSound),
             const SizedBox(height: 20),
             _GlassButton(
                 label: "OUR TEAM", onTap: onTeam, onButtonSound: onButtonSound),
