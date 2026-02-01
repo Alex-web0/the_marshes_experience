@@ -6,6 +6,7 @@ import 'package:flame/input.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'dart:math';
@@ -74,6 +75,7 @@ class RemotePlayer extends PositionComponent
     // Remove old if exists
     children
         .whereType<RectangleComponent>()
+        .toList()
         .forEach((c) => c.removeFromParent());
 
     final truncatedName =
@@ -159,9 +161,12 @@ class MultiplayerMarshesGame extends FlameGame
   StreamSubscription? _sensorSubscription;
   StreamSubscription? _gameStream;
 
+  final VoidCallback? onHazardDropped;
+
   MultiplayerMarshesGame({
     required this.initialGameData,
     required this.onSpeedUpdate,
+    this.onHazardDropped,
   }) : super() {
     debugMode = kDebugMode;
   }
@@ -219,11 +224,27 @@ class MultiplayerMarshesGame extends FlameGame
 
   final Set<String> _spawnedHazardIds = {};
 
+  double hazardCooldownTimer = 0;
+
   void dropHazard() {
-    _service.addHazard(
-      lane: player.currentLane,
-      distance: localDistanceTraveled,
-    );
+    if (hazardCooldownTimer > 0) return;
+
+    // Drop a row/cluster of 3-5 hazards
+    final r = Random();
+    int count = 3 + r.nextInt(3); // 3 to 5
+    for (int i = 0; i < count; i++) {
+      // Randomize lane and slight distance offset to create a "field"
+      int lane = r.nextInt(laneCount);
+      double offset = r.nextDouble() * 10.0; // Spread over 10 meters
+
+      _service.addHazard(
+        lane: lane,
+        distance: localDistanceTraveled + offset,
+      );
+    }
+
+    hazardCooldownTimer = 9.0;
+    onHazardDropped?.call();
   }
 
   void _onGameUpdate(MultiplayerGame? gameData) {
@@ -286,15 +307,68 @@ class MultiplayerMarshesGame extends FlameGame
   }
 
   void boostSpeed() {
+    // If we are already above normal max speed (e.g. from fish boost), disable manual boost
+    if (currentSpeed >= kMaxSpeed) return;
+
     // Add speed burst
     currentSpeed += 50;
+
     if (currentSpeed > kMaxSpeed) currentSpeed = kMaxSpeed;
+  }
+
+  @override
+  KeyEventResult onKeyEvent(
+      KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.keyW ||
+          event.logicalKey == LogicalKeyboardKey.space ||
+          event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        boostSpeed();
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.keyA ||
+          event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+        player.moveLeft();
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.keyD ||
+          event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        player.moveRight();
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.keyS ||
+          event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        dropHazard();
+        return KeyEventResult.handled;
+      }
+    }
+    return super.onKeyEvent(event, keysPressed);
   }
 
   @override
   void update(double dt) {
     super.update(dt);
     _spawnTimer.update(dt);
+
+    if (hazardCooldownTimer > 0) {
+      hazardCooldownTimer -= dt;
+    }
+
+    if (_fishBoostTimer > 0) {
+      _fishBoostTimer -= dt;
+      if (_fishBoostTimer <= 0) {
+        // Boost expired - Reset speed AND Music immediately
+        currentSpeed = kMaxSpeed;
+
+        if (_isHighSpeedMusic) {
+          _isHighSpeedMusic = false;
+          // Reset Timer
+          _musicResetDebounceTimer = 5.0;
+          FlameAudio.bgm.audioPlayer.setVolume(0.5);
+          FlameAudio.bgm.audioPlayer.setPlaybackRate(1.0);
+        }
+      }
+    }
 
     // Update UI
     onSpeedUpdate(currentSpeed);
@@ -310,7 +384,31 @@ class MultiplayerMarshesGame extends FlameGame
     // Decay Speed
     if (currentSpeed > kMinSpeed) {
       currentSpeed -= 20.0 * dt; // Decay rate
+      // If we were super speeding, we decay back down towards max speed then normal decay
       if (currentSpeed < kMinSpeed) currentSpeed = kMinSpeed;
+    }
+
+    // Low Speed/Obstacle Music Logic
+    if (currentSpeed > 1000) {
+      _musicResetDebounceTimer = 5.0;
+      if (!_isHighSpeedMusic) {
+        _isHighSpeedMusic = true;
+        FlameAudio.bgm.audioPlayer.setVolume(1.0);
+        FlameAudio.bgm.audioPlayer.setPlaybackRate(1.5);
+      }
+    } else if (currentSpeed < 950) {
+      if (_isHighSpeedMusic) {
+        _musicResetDebounceTimer -= dt;
+        if (_musicResetDebounceTimer <= 0) {
+          _isHighSpeedMusic = false;
+          FlameAudio.bgm.audioPlayer.setVolume(0.5);
+          FlameAudio.bgm.audioPlayer.setPlaybackRate(1.0);
+          _musicResetDebounceTimer = 5.0;
+        }
+      }
+    } else {
+      // Hysteresis range (950-1000) - keep timer reset
+      _musicResetDebounceTimer = 5.0;
     }
 
     // Sync to DB (throttle)
@@ -359,6 +457,8 @@ class MultiplayerMarshesGame extends FlameGame
     _gameStream?.cancel();
     FlameAudio.bgm.stop();
     super.onRemove();
+    FlameAudio.bgm.audioPlayer.setPlaybackRate(1.0);
+    FlameAudio.bgm.audioPlayer.setVolume(0.5);
   }
 
   void playItemCollectSound() {
@@ -366,12 +466,28 @@ class MultiplayerMarshesGame extends FlameGame
       FlameAudio.play('sounds/item_collect.mp3', volume: 0.5);
   }
 
+  int fishCount = 0;
+
+  double _fishBoostTimer = 0;
+  static const double kFishBoostMaxSpeed = 2000.0;
+  static const double kFishBoostSpeedThreshold = 650.0;
+  static const double kFishBoostSpeedMultiplier = 1.2;
+  static const double kFishBoostDuration = 2.5;
+
+  bool _isHighSpeedMusic = false;
+  double _musicResetDebounceTimer = 5.0;
+
   void incrementFishCount() {
-    _service.updatePlayerState(
-        fishCount:
-            (initialGameData.players[_service.currentPlayerId]?.fishCount ??
-                    0) +
-                1);
+    fishCount++;
+    if (currentSpeed > kFishBoostSpeedThreshold) {
+      if (currentSpeed + kFishBoostSpeedThreshold <= kFishBoostMaxSpeed) {
+        currentSpeed += kFishBoostSpeedThreshold * kFishBoostSpeedMultiplier;
+      } else {
+        currentSpeed = kFishBoostMaxSpeed;
+      }
+      _fishBoostTimer = kFishBoostDuration; // Reset timer to 5 seconds
+    }
+    _service.updatePlayerState(fishCount: fishCount);
   }
 
   void gameOver() {}
@@ -511,6 +627,16 @@ class MultiplayerBoatPlayer extends PositionComponent
       health--;
       game.currentSpeed *= 0.5;
       game.obstaclesHit++;
+      game._fishBoostTimer = 0; // Cancel boost on hit
+
+      // Reset music if it was boosted
+      if (game._isHighSpeedMusic) {
+        game._isHighSpeedMusic = false;
+        game._musicResetDebounceTimer = 5.0;
+        FlameAudio.bgm.audioPlayer.setVolume(0.5);
+        FlameAudio.bgm.audioPlayer.setPlaybackRate(1.0);
+      }
+
       other.removeFromParent();
     } else if (other is MultiplayerFish) {
       other.collect();

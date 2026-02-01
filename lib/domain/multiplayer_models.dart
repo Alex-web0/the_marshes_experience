@@ -1,4 +1,5 @@
 // Multiplayer game models
+import 'package:flutter/foundation.dart';
 import 'game_status.dart';
 import 'multiplayer_constants.dart';
 
@@ -6,13 +7,16 @@ enum RaceLength { short, medium, long }
 
 extension RaceLengthExtension on RaceLength {
   int get distance {
+    if (this == RaceLength.short && kDebugMode) {
+      return 200;
+    }
     switch (this) {
       case RaceLength.short:
         return 800;
       case RaceLength.medium:
-        return 3600;
+        return 2800;
       case RaceLength.long:
-        return 7200;
+        return 5000;
     }
   }
 
@@ -21,9 +25,9 @@ extension RaceLengthExtension on RaceLength {
       case RaceLength.short:
         return 'Short (800m)';
       case RaceLength.medium:
-        return 'Medium (3600m)';
+        return 'Medium (2800m)';
       case RaceLength.long:
-        return 'Long (7200m)';
+        return 'Long (5000m)';
     }
   }
 }
@@ -77,6 +81,8 @@ class MultiplayerGame {
   final Map<String, MultiplayerHazard> hazards;
   final RaceLength raceLength;
   final String? winnerId;
+  final String? nextGameId;
+  final String? nextGameCode;
 
   MultiplayerGame({
     required this.gameId,
@@ -91,6 +97,8 @@ class MultiplayerGame {
     this.hazards = const {},
     this.raceLength = RaceLength.short,
     this.winnerId,
+    this.nextGameId,
+    this.nextGameCode,
   });
 
   factory MultiplayerGame.fromMap(String gameId, Map<dynamic, dynamic> map) {
@@ -134,6 +142,8 @@ class MultiplayerGame {
       hazards: hazardsMap,
       raceLength: length,
       winnerId: map['winnerId'],
+      nextGameId: map['nextGameId'],
+      nextGameCode: map['nextGameCode'],
     );
   }
 
@@ -148,6 +158,9 @@ class MultiplayerGame {
       'finishedAt': finishedAt,
       'raceLength': raceLength.toString(),
       'winnerId': winnerId,
+      'nextGameId': nextGameId,
+      'nextGameCode': nextGameCode,
+      'players': players.map((key, value) => MapEntry(key, value.toMap())),
     };
   }
 }

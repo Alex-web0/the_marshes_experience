@@ -23,6 +23,8 @@ class _MultiplayerGamePageState extends State<MultiplayerGamePage> {
   late MultiplayerMarshesGame _game;
   final ValueNotifier<double> _speedNotifier = ValueNotifier(300.0);
   final ValueNotifier<int> _hazardCooldownNotifier = ValueNotifier(0);
+  final ValueNotifier<MultiplayerGame?> _gameStateNotifier =
+      ValueNotifier(null);
   Timer? _cooldownTimer;
   StreamSubscription? _gameStatusSubscription;
 
@@ -37,12 +39,30 @@ class _MultiplayerGamePageState extends State<MultiplayerGamePage> {
           _speedNotifier.value = speed;
         }
       },
+      onHazardDropped: () {
+        _hazardCooldownNotifier.value = 9;
+        _cooldownTimer?.cancel();
+        _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          if (_hazardCooldownNotifier.value > 0) {
+            _hazardCooldownNotifier.value -= 1;
+          } else {
+            timer.cancel();
+          }
+        });
+      },
     );
 
-    // Listen for game status changes (e.g. when game ends)
+    // Initialize notifier with initial data
+    _gameStateNotifier.value = widget.gameData;
+
+    // Listen for game status changes
     final service = MultiplayerService();
     _gameStatusSubscription =
         service.watchGame(widget.gameData.gameId).listen((gameData) {
+      if (mounted) {
+        _gameStateNotifier.value = gameData;
+      }
+
       if (gameData?.status == GameStatus.ended && mounted) {
         // Game ended, navigate back to show results
         // Use post-frame callback to avoid navigator lock issues
@@ -63,6 +83,7 @@ class _MultiplayerGamePageState extends State<MultiplayerGamePage> {
   void dispose() {
     _speedNotifier.dispose();
     _hazardCooldownNotifier.dispose();
+    _gameStateNotifier.dispose();
     _leftPressed.dispose();
     _rightPressed.dispose();
     _cooldownTimer?.cancel();
@@ -72,21 +93,13 @@ class _MultiplayerGamePageState extends State<MultiplayerGamePage> {
 
   void _onDropHazard() {
     _game.dropHazard();
-    _hazardCooldownNotifier.value = 6;
-    _cooldownTimer?.cancel();
-    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_hazardCooldownNotifier.value > 0) {
-        _hazardCooldownNotifier.value -= 1;
-      } else {
-        timer.cancel();
-      }
-    });
   }
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.keyW ||
-          event.logicalKey == LogicalKeyboardKey.arrowUp) {
+          event.logicalKey == LogicalKeyboardKey.arrowUp ||
+          event.logicalKey == LogicalKeyboardKey.space) {
         _game.boostSpeed();
         return KeyEventResult.handled;
       }
@@ -163,14 +176,27 @@ class _MultiplayerGamePageState extends State<MultiplayerGamePage> {
               ),
               const SizedBox(height: 30),
               // Buttons
+              _dialogButton('CONTROLS', Colors.blueAccent, () {
+                _showControlsDialog(context);
+              }),
+              const SizedBox(height: 10),
               _dialogButton(
                   'RESUME', Colors.green, () => Navigator.of(ctx).pop()),
               const SizedBox(height: 10),
-              _dialogButton('LEAVE GAME', Colors.red, () async {
+              _dialogButton('MAIN MENU', Colors.red, () async {
                 Navigator.of(ctx).pop(); // Close dialog
                 await MultiplayerService().leaveGame();
                 if (mounted) {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  Navigator.of(context).pop('main_menu');
+                }
+              }),
+              const SizedBox(height: 10),
+              _dialogButton('LEAVE GAME', Colors.orangeAccent, () async {
+                Navigator.of(ctx).pop(); // Close dialog
+                await MultiplayerService().leaveGame();
+                if (mounted) {
+                  Navigator.of(context)
+                      .pop('leave'); // Return to lobby with 'leave' signal
                 }
               }),
             ],
@@ -197,6 +223,76 @@ class _MultiplayerGamePageState extends State<MultiplayerGamePage> {
     );
   }
 
+  void _showControlsDialog(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Controls',
+      barrierColor: Colors.black54, // Overlay on top of pause menu
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (ctx, anim1, anim2) => const SizedBox(), // Unused
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        final curve = CurvedAnimation(parent: anim1, curve: Curves.elasticOut);
+        return ScaleTransition(
+          scale: curve,
+          child: AlertDialog(
+            backgroundColor: Colors.black.withOpacity(0.95),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: const BorderSide(color: Colors.blueAccent, width: 2)),
+            title: Text('CONTROLS',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.pixelifySans(
+                    color: Colors.blueAccent,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildKeyRow('W / UP', 'BOOST SPEED'),
+                const SizedBox(height: 15),
+                _buildKeyRow('A / LEFT', 'MOVE LEFT'),
+                const SizedBox(height: 15),
+                _buildKeyRow('D / RIGHT', 'MOVE RIGHT'),
+                const SizedBox(height: 15),
+                _buildKeyRow('S / DOWN', 'DROP HAZARD'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('CLOSE',
+                    style: GoogleFonts.alexandria(color: Colors.white)),
+              )
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildKeyRow(String keys, String action) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: Colors.white10,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: Text(keys,
+              style: GoogleFonts.pixelifySans(
+                  color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+        Text(action,
+            style:
+                GoogleFonts.alexandria(color: Colors.cyanAccent, fontSize: 12)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -220,55 +316,191 @@ class _MultiplayerGamePageState extends State<MultiplayerGamePage> {
               left: 0,
               right: 0,
               child: Center(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                        color: Colors.cyanAccent.withOpacity(0.5), width: 1.5),
-                  ),
-                  child: ValueListenableBuilder<double>(
-                    valueListenable: _speedNotifier,
-                    builder: (context, speed, _) {
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Column(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 15, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                            color: Colors.cyanAccent.withOpacity(0.5),
+                            width: 1.5),
+                      ),
+                      child: ValueListenableBuilder<MultiplayerGame?>(
+                        valueListenable: _gameStateNotifier,
+                        builder: (context, gameState, _) {
+                          // Calculate Ranks
+                          int myRank = 0;
+                          String topPlayerName = '-';
+                          int myFish = 0;
+
+                          if (gameState != null) {
+                            final players = gameState.players.values.toList();
+                            players.sort((a, b) => b.score.compareTo(a.score));
+
+                            final myId = MultiplayerService().currentPlayerId;
+                            final myIndex =
+                                players.indexWhere((p) => p.playerId == myId);
+                            if (myIndex >= 0) {
+                              myRank = myIndex + 1;
+                              myFish = players[myIndex].fishCount;
+                            }
+
+                            if (players.isNotEmpty) {
+                              final top = players.first;
+                              topPlayerName = top.name.length > 5
+                                  ? top.name.substring(0, 5)
+                                  : top.name;
+                            }
+                          }
+
+                          return Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text('SPEED',
+                              ValueListenableBuilder<double>(
+                                valueListenable: _speedNotifier,
+                                builder: (context, speed, _) {
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // 1. MY RANK (Compact)
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text('RANK',
+                                              style: GoogleFonts.alexandria(
+                                                  fontSize: 10,
+                                                  color: Colors.white60)),
+                                          Text('#$myRank',
+                                              style: GoogleFonts.alexandria(
+                                                  fontSize: 18,
+                                                  color: Colors.amber,
+                                                  fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Container(
+                                          width: 1,
+                                          height: 25,
+                                          color: Colors.white24),
+                                      const SizedBox(width: 10),
+
+                                      // 2. TOP RANK (Compact)
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text('TOP',
+                                              style: GoogleFonts.alexandria(
+                                                  fontSize: 10,
+                                                  color: Colors.white60)),
+                                          Text(topPlayerName,
+                                              style: GoogleFonts.pixelifySans(
+                                                  fontSize: 16,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Container(
+                                          width: 1,
+                                          height: 25,
+                                          color: Colors.white24),
+                                      const SizedBox(width: 10),
+
+                                      // 3. SPEED (Middle)
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text('SPEED',
+                                              style: GoogleFonts.alexandria(
+                                                  fontSize: 10,
+                                                  color: Colors.white60)),
+                                          Text('${speed.toInt()}',
+                                              style: GoogleFonts.alexandria(
+                                                  fontSize: 18,
+                                                  color: speed > 800
+                                                      ? Colors.redAccent
+                                                      : Colors.cyanAccent,
+                                                  fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Container(
+                                          width: 1,
+                                          height: 25,
+                                          color: Colors.white24),
+                                      const SizedBox(width: 10),
+
+                                      // 4. DIST
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text('DIST',
+                                              style: GoogleFonts.alexandria(
+                                                  fontSize: 10,
+                                                  color: Colors.white60)),
+                                          Text(
+                                              '${_game.localDistanceTraveled.toInt()}m',
+                                              style: GoogleFonts.alexandria(
+                                                  fontSize: 18,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    // Secondary Pill: Fish
+                    ValueListenableBuilder<MultiplayerGame?>(
+                      valueListenable: _gameStateNotifier,
+                      builder: (context, gameState, _) {
+                        int myFish = 0;
+                        if (gameState != null) {
+                          final myId = MultiplayerService().currentPlayerId;
+                          final players = gameState.players.values.toList();
+                          final myIndex =
+                              players.indexWhere((p) => p.playerId == myId);
+                          if (myIndex >= 0) {
+                            myFish = players[myIndex].fishCount;
+                          }
+                        }
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: Colors.orangeAccent.withOpacity(0.5),
+                                width: 1.5),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.set_meal,
+                                  color: Colors.orangeAccent, size: 14),
+                              const SizedBox(width: 5),
+                              Text('$myFish',
                                   style: GoogleFonts.alexandria(
-                                      fontSize: 10, color: Colors.white60)),
-                              Text('${speed.toInt()}',
-                                  style: GoogleFonts.alexandria(
-                                      fontSize: 18,
-                                      color: Colors.cyanAccent,
+                                      fontSize: 14,
+                                      color: Colors.orangeAccent,
                                       fontWeight: FontWeight.bold)),
                             ],
                           ),
-                          const SizedBox(width: 20),
-                          Container(
-                              width: 1, height: 30, color: Colors.white24),
-                          const SizedBox(width: 20),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('DIST',
-                                  style: GoogleFonts.alexandria(
-                                      fontSize: 10, color: Colors.white60)),
-                              Text('${_game.localDistanceTraveled.toInt()}m',
-                                  style: GoogleFonts.alexandria(
-                                      fontSize: 18,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -415,7 +647,7 @@ class _MultiplayerGamePageState extends State<MultiplayerGamePage> {
             // 6. Exit Button (With Dialog)
             Positioned(
               top: 50,
-              right: 20,
+              right: 10,
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.5),

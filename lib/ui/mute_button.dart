@@ -32,23 +32,26 @@ class _MuteButtonState extends State<MuteButton> {
 
         return GestureDetector(
           onTap: _toggleMute,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 2,
+          child: Opacity(
+            opacity: isMuted ? 0.7 : 1.0,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 2,
+                ),
               ),
-            ),
-            child: Image.asset(
-              !isMuted
-                  ? 'assets/images/unmute_button.png'
-                  : 'assets/images/mute_button.png',
-              width: 40,
-              height: 40,
-              fit: BoxFit.contain,
+              child: Image.asset(
+                isMuted
+                    ? 'assets/images/unmute_button.png'
+                    : 'assets/images/mute_button.png',
+                width: 40,
+                height: 40,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
         );

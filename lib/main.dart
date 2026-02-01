@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:the_marshes_experience/firebase_options.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -216,13 +217,17 @@ class _GameContainerState extends State<GameContainer> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Center(
         child: AspectRatio(
           aspectRatio: 9 / 19.5, // Mobile Aspect Ratio Constraint
           child: Stack(
             children: [
               // 1. GAME LAYER
-              GameWidget(game: _game),
+              Focus(
+                autofocus: true,
+                child: GameWidget(game: _game),
+              ),
 
               // 2. HUD LAYER (Only when playing)
               if (!_showMenu && _activeStory == null && !_showPauseMenu)
@@ -233,32 +238,39 @@ class _GameContainerState extends State<GameContainer> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("DIST: ${_score}m",
-                              style: kGameFont.copyWith(fontSize: 20)),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Icon(Icons.set_meal,
-                                  color: Colors.cyanAccent, size: 16),
-                              const SizedBox(width: 4),
-                              Text("$_fishCount",
-                                  style: kGameFont.copyWith(
-                                      fontSize: 16, color: Colors.cyanAccent)),
-                              const SizedBox(width: 12),
-                              const Icon(Icons.menu_book,
-                                  color: Colors.amber, size: 16),
-                              const SizedBox(width: 4),
-                              Text("$_storyCount",
-                                  style: kGameFont.copyWith(
-                                      fontSize: 16, color: Colors.amber)),
-                            ],
-                          ),
-                        ],
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text("DIST: ${_score}m",
+                                style: kGameFont.copyWith(fontSize: 20)),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.set_meal,
+                                    color: Colors.cyanAccent, size: 16),
+                                const SizedBox(width: 4),
+                                Text("$_fishCount",
+                                    style: kGameFont.copyWith(
+                                        fontSize: 16,
+                                        color: Colors.cyanAccent)),
+                                const SizedBox(width: 12),
+                                const Icon(Icons.menu_book,
+                                    color: Colors.amber, size: 16),
+                                const SizedBox(width: 4),
+                                Text("$_storyCount",
+                                    style: kGameFont.copyWith(
+                                        fontSize: 16, color: Colors.amber)),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           // Lives indicator
                           ...List.generate(
@@ -269,7 +281,7 @@ class _GameContainerState extends State<GameContainer> {
                                         : Icons.favorite_border,
                                     color: Colors.redAccent,
                                   )),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           // Pause button
                           GestureDetector(
                             onTap: () {
@@ -292,6 +304,55 @@ class _GameContainerState extends State<GameContainer> {
                   ),
                 ),
 
+              // 2.5. On-screen Controls (Web/Desktop or if Gyro fails fallback)
+              if (!_showMenu &&
+                  _activeStory == null &&
+                  !_showPauseMenu &&
+                  (kIsWeb ||
+                      defaultTargetPlatform == TargetPlatform.windows ||
+                      defaultTargetPlatform == TargetPlatform.macOS ||
+                      defaultTargetPlatform == TargetPlatform.linux))
+                Positioned(
+                  bottom: 20,
+                  left: 20,
+                  right: 20,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Left Button
+                      GestureDetector(
+                        onTapDown: (_) => _game.player.moveLeft(),
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: Colors.white.withOpacity(0.5)),
+                          ),
+                          child: const Icon(Icons.arrow_back,
+                              color: Colors.white, size: 30),
+                        ),
+                      ),
+                      // Right Button
+                      GestureDetector(
+                        onTapDown: (_) => _game.player.moveRight(),
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: Colors.white.withOpacity(0.5)),
+                          ),
+                          child: const Icon(Icons.arrow_forward,
+                              color: Colors.white, size: 30),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // 3. MENU LAYER (Liquid Glass)
               if (_showMenu && !_showTeamPage && !_showMultiplayerPage)
                 LiquidGlassMenu(
@@ -306,7 +367,7 @@ class _GameContainerState extends State<GameContainer> {
               // 3.1. MUTE BUTTON (Main Menu)
               if (_showMenu && !_showTeamPage && !_showMultiplayerPage)
                 Positioned(
-                  bottom: 120,
+                  bottom: 80,
                   left: 0,
                   right: 0,
                   child: Center(
@@ -352,7 +413,7 @@ class _GameContainerState extends State<GameContainer> {
               // 3.7. MUTE BUTTON (Pause Menu)
               if (_showPauseMenu)
                 Positioned(
-                  bottom: 120,
+                  bottom: 80,
                   left: 0,
                   right: 0,
                   child: Center(

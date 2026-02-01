@@ -56,6 +56,16 @@ class MultiplayerService {
 
       debugPrint("Saving game to DB...");
       await _database.child('games/$gameId').set(newGame.toMap());
+
+      // Set up onDisconnect to remove player if game is in waiting state
+      // Note: Ideally we'd only do this while waiting, but managing the switch is complex without Cloud Functions.
+      // For now, if they disconnect, they leave.
+      final playerRef = _database.child('games/$gameId/players/$playerId');
+      await playerRef.onDisconnect().remove();
+
+      // We also try to decrement player count on disconnect if possible, but transactions on disconnect are tricky.
+      // We'll rely on client-side counting or players finding the game empty.
+
       _currentGameId = gameId;
       _currentPlayerId = playerId;
 
@@ -137,6 +147,10 @@ class MultiplayerService {
     await gameRef.child('players/$playerId').set(player.toMap());
     final newPlayerCount = currentPlayers + 1;
     await gameRef.child('currentPlayers').set(newPlayerCount);
+
+    // Set up onDisconnect to remove player
+    final playerRef = gameRef.child('players/$playerId');
+    await playerRef.onDisconnect().remove();
 
     // Auto-start game if lobby is now full
     if (newPlayerCount >= maxPlayers) {
@@ -254,6 +268,93 @@ class MultiplayerService {
     await _database.child('games/$_currentGameId').update(updates);
   }
 
+  // Duplicate the game and move all valid players to it
+  Future<void> duplicateGame() async {
+    if (_currentGameId == null) return;
+
+    final snapshot = await _database.child('games/$_currentGameId').get();
+    if (!snapshot.exists || snapshot.value == null) return;
+
+    final oldGameData = snapshot.value as Map<dynamic, dynamic>;
+    final playersData = oldGameData['players'] as Map<dynamic, dynamic>? ?? {};
+
+    // Filter valid players (connected/online).
+    // Note: Since we don't have a reliable 'isOnline' flag in the model that persists
+    // (onDisconnect removes them), we will assume players currently in the list are "online" enough.
+    // However, if we wanted to handle "offline" vs "removed", we'd need that flag.
+    // For now, duplicate everyone who is still in the DB.
+    final newPlayers = <String, Map<String, dynamic>>{};
+    int playerCount = 0;
+    String? newCreatorId;
+
+    // We can preserve the creator if they are still here, otherwise pick the first one.
+    final oldCreatorId = oldGameData['creatorId'];
+
+    playersData.forEach((key, value) {
+      final pData = value as Map<dynamic, dynamic>;
+      // If we implemented isOnline, check it here: if (pData['isOnline'] != true) return;
+
+      // Reset stats for new game
+      newPlayers[key] = {
+        'playerId': pData['playerId'],
+        'name': pData['name'],
+        'isReady': false, // Reset ready status
+        'joinedAt': DateTime.now().millisecondsSinceEpoch,
+        // Reset other stats
+        'score': 0,
+        'fishCount': 0,
+        'lives': 3,
+        'storyCount': 0,
+        'obstaclesHit': 0,
+        'position': null,
+      };
+      playerCount++;
+      if (key == oldCreatorId) {
+        newCreatorId = key;
+      }
+    });
+
+    if (playerCount == 0) return; // No one to migrate
+
+    // If creator left, assign new creator
+    newCreatorId ??= newPlayers.keys.first;
+
+    // Create new game
+    final newGameId = _database.child('games').push().key!;
+    // Generate a fresh code
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final random = Random();
+    final newCode =
+        List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
+
+    final newGameMap = {
+      'gameId': newGameId,
+      'code': newCode,
+      'status': GameStatus.waiting.name, // Everyone goes back to waiting/queue
+      'creatorId': newCreatorId,
+      'maxPlayers':
+          oldGameData['maxPlayers'] ?? MultiplayerConstants.kMaxPlayers,
+      'currentPlayers': playerCount,
+      'players': newPlayers,
+      'hazards': {},
+      'raceLength': oldGameData['raceLength'] ?? RaceLength.short.name,
+      'createdAt': ServerValue.timestamp,
+    };
+
+    debugPrint("Duplicating game to: $newGameId with code $newCode");
+    await _database.child('games/$newGameId').set(newGameMap);
+
+    // Update old game to point to new game
+    // We use a special status 'migrated' or just modify the client to listen for a 'nextGameId' field
+    // Update old game to point to new game
+    // We use a special status 'restarted' and provide next game details
+    await _database.child('games/$_currentGameId').update({
+      'status': GameStatus.restarted.name,
+      'nextGameId': newGameId,
+      'nextGameCode': newCode,
+    });
+  }
+
   // Add a hazard to the game
   Future<void> addHazard({required int lane, required double distance}) async {
     if (_currentGameId == null || _currentPlayerId == null) return;
@@ -279,28 +380,59 @@ class MultiplayerService {
     });
   }
 
+  // Cancel game (creator only) - destroys the game for everyone
+  Future<void> cancelGame() async {
+    if (_currentGameId == null) return;
+
+    // Remove the game entirely from DB
+    await _database.child('games/$_currentGameId').remove();
+
+    _gameSubscription?.cancel();
+    _currentGameId = null;
+    _currentPlayerId = null;
+  }
+
   // Leave game
   Future<void> leaveGame() async {
     if (_currentGameId == null || _currentPlayerId == null) return;
 
     final gameRef = _database.child('games/$_currentGameId');
 
-    // Mark player as offline instead of removing
-    await gameRef.child('players/$_currentPlayerId/isOnline').set(false);
+    // Remove player entirely from the game
+    await gameRef.child('players/$_currentPlayerId').remove();
 
-    // Update player count (online players)
+    // Use transaction to safely decrement player count
+    await gameRef.child('currentPlayers').runTransaction((mutableData) {
+      if (mutableData == null) return Transaction.success(0);
+      final current = (mutableData as int);
+      return Transaction.success(max(0, current - 1));
+    });
+
+    // Check if we should delete the game (no players left)
+    // We check the snapshot again to be sure
     final snapshot = await gameRef.child('currentPlayers').get();
-    final currentPlayers = (snapshot.value as int?) ?? 1;
-    await gameRef.child('currentPlayers').set(max(0, currentPlayers - 1));
+    final remainingPlayers = (snapshot.value as int?) ?? 0;
 
-    // If no players left online, delete game
-    if (currentPlayers <= 1) {
+    if (remainingPlayers <= 0) {
       await gameRef.remove();
     }
 
     _gameSubscription?.cancel();
     _currentGameId = null;
     _currentPlayerId = null;
+  }
+
+  // Switch local state to a new game (for migration)
+  Future<void> switchToGame(String newGameId) async {
+    _currentGameId = newGameId;
+    // _currentPlayerId remains the same as we migrated the player ID in duplicateGame
+    // But we need to update the onDisconnect handlers for the new path
+
+    if (_currentPlayerId != null) {
+      final playerRef =
+          _database.child('games/$newGameId/players/$_currentPlayerId');
+      await playerRef.onDisconnect().remove();
+    }
   }
 
   // Clean up

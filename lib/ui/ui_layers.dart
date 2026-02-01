@@ -189,17 +189,25 @@ class _HeritageStoryDialogState extends State<HeritageStoryDialog>
     super.dispose();
   }
 
+  void _handleTap() {
+    if (_isFinished) {
+      // Text fully shown, dismiss
+      widget.onButtonSound?.call();
+      widget.onDismiss();
+    } else {
+      // Animation still running, skip to full text
+      setState(() {
+        _isFinished = true;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior:
           HitTestBehavior.translucent, // Ensure taps on empty space are caught
-      onTap: () {
-        if (_isFinished) {
-          widget.onButtonSound?.call(); // Play button sound on dismissal
-          widget.onDismiss();
-        }
-      },
+      onTap: _handleTap,
       child: Stack(
         children: [
           Align(
@@ -247,38 +255,58 @@ class _HeritageStoryDialogState extends State<HeritageStoryDialog>
                                   ),
                               const SizedBox(height: 10),
                               Expanded(
-                                child: DefaultTextStyle(
-                                  style: kGameFont.copyWith(
-                                      fontSize: 18, color: Colors.white),
-                                  child: AnimatedTextKit(
-                                    animatedTexts: [
-                                      TypewriterAnimatedText(
-                                          "${widget.fact.factText} ...continue",
-                                          speed:
-                                              const Duration(milliseconds: 50),
-                                          cursor:
-                                              '' // Hide default cursor if any
+                                child: _isFinished
+                                    ? Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              widget.fact.factText,
+                                              style: kGameFont.copyWith(
+                                                  fontSize: 18,
+                                                  color: Colors.white),
+                                            ),
                                           ),
-                                    ],
-                                    isRepeatingAnimation: false,
-                                    onFinished: () {
-                                      setState(() => _isFinished = true);
-                                    },
-                                  ),
-                                ),
+                                          FadeTransition(
+                                            opacity: _cursorController,
+                                            child: Align(
+                                              alignment: Alignment.bottomRight,
+                                              child: Text(
+                                                '...tap to continue',
+                                                style: kGameFont.copyWith(
+                                                    fontSize: 14,
+                                                    color: Colors.yellowAccent,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : IgnorePointer(
+                                        child: DefaultTextStyle(
+                                          style: kGameFont.copyWith(
+                                              fontSize: 18,
+                                              color: Colors.white),
+                                          child: AnimatedTextKit(
+                                            animatedTexts: [
+                                              TypewriterAnimatedText(
+                                                widget.fact.factText,
+                                                speed: const Duration(
+                                                    milliseconds: 50),
+                                                cursor: '▌',
+                                              ),
+                                            ],
+                                            isRepeatingAnimation: false,
+                                            onFinished: () {
+                                              setState(
+                                                  () => _isFinished = true);
+                                            },
+                                          ),
+                                        ),
+                                      ),
                               ),
-                              if (_isFinished)
-                                Align(
-                                  alignment: Alignment.bottomRight,
-                                  child: FadeTransition(
-                                    opacity: _cursorController,
-                                    child: Container(
-                                      width: 15,
-                                      height: 25,
-                                      color: Colors.white, // Block cursor
-                                    ),
-                                  ),
-                                )
                             ],
                           ),
                         )

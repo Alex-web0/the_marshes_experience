@@ -63,10 +63,44 @@ class _MultiplayerPageState extends State<MultiplayerPage> {
         builder: (context) => MultiplayerGamePage(gameData: game),
       ),
     )
-        .then((_) {
-      // When coming back, reset status (if needed, or leave/finish logic handles it)
+        .then((result) {
+      if (result == 'main_menu') {
+        widget.onBack();
+        return;
+      }
+
+      // Handle explicit leave from game (pause menu -> leave game)
+      // The user wants to "leave" playing but see the end screen / lobby,
+      // but strictly speaking 'leaving' in multiplayer usually means disconnect.
+      // However, the request says "reset multiplayer game as now it is rejoining".
+      // We will attempt to fetch the game again to see the updated state (where this player might be offline).
+
       if (mounted) {
-        _leaveGame(); // Auto leave if they come back? Or show results?
+        setState(() {
+          // If the game ended, we want to show the end screen or lobby, so we just clear 'playing'
+          // The specific state shown will depend on _currentGame?.status in _buildContent
+          if (_currentGame?.status == GameStatus.ended) {
+            _status = 'ended';
+          } else {
+            // If we returned with 'leave', we effectively left the "playing" state.
+            // If the game is still running, we might want to show lobby or just go back to idle.
+            // But the user requested "reset multiplayer game as now it is rejoining automatically".
+            // If we actually left the game in DB, we are no longer a player.
+            // So we should probably go back to 'idle' or try to re-join if that's the intention?
+            // "reset multiplayer game as now it is rejoining autmatically after kleave if the queue is full" - this is slightly ambiguous.
+            // Assuming it means: If I leave, I should be taken back to the multiplayer menu (idle) or lobby.
+            // If I actually CALLED leaveGame(), I am removed.
+
+            if (result == 'leave') {
+              // We fully left.
+              _status = 'idle';
+              _currentGame = null;
+              _isCreator = false;
+            } else {
+              _status = _isCreator ? 'waiting' : 'queued';
+            }
+          }
+        });
       }
     });
   }
@@ -79,17 +113,18 @@ class _MultiplayerPageState extends State<MultiplayerPage> {
   }
 
   void _createGame() {
-    if (_nameController.text.trim().isEmpty) {
+    final playerName = _nameController.text.trim();
+    if (playerName.isEmpty) {
       setState(() {
         _status = 'error';
         _errorMessage = 'Please enter a player name';
       });
       return;
     }
-    _showCreateGameDialog();
+    _showCreateGameDialog(playerName);
   }
 
-  void _showCreateGameDialog() {
+  void _showCreateGameDialog(String playerName) {
     _codeController.text = _generateCode();
     // Default race length
     RaceLength selectedLength = RaceLength.short;
@@ -177,17 +212,29 @@ class _MultiplayerPageState extends State<MultiplayerPage> {
                                   ? Border.all(color: Colors.cyanAccent)
                                   : null,
                             ),
-                            child: Center(
-                              child: Text(
-                                length.label.split(' ').first,
-                                style: GoogleFonts.alexandria(
-                                  color: isSelected
-                                      ? Colors.cyanAccent
-                                      : Colors.white60,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  length.label.split(' ').first,
+                                  style: GoogleFonts.alexandria(
+                                    color: isSelected
+                                        ? Colors.cyanAccent
+                                        : Colors.white60,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
                                 ),
-                              ),
+                                Text(
+                                  "${length.distance}m",
+                                  style: GoogleFonts.alexandria(
+                                    color: isSelected
+                                        ? Colors.cyanAccent.withOpacity(0.7)
+                                        : Colors.white38,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -262,7 +309,7 @@ class _MultiplayerPageState extends State<MultiplayerPage> {
                 onPressed: () {
                   Navigator.pop(context);
                   _performCreateGame(
-                    _nameController.text.trim(),
+                    playerName,
                     _codeController.text,
                     selectedLength,
                     selectedMaxPlayers,
@@ -303,14 +350,73 @@ class _MultiplayerPageState extends State<MultiplayerPage> {
       // Listen to game updates
       _gameSubscription?.cancel();
       _gameSubscription = _service.watchGame(game.gameId).listen((updatedGame) {
-        if (mounted && updatedGame != null) {
+        if (!mounted) return;
+
+        if (updatedGame == null) {
           setState(() {
-            _currentGame = updatedGame;
-            if (updatedGame.status == GameStatus.playing) {
-              _navigateToGame(updatedGame);
+            _status = 'idle';
+            _currentGame = null;
+            _isCreator = false;
+          });
+          return;
+        }
+
+        // Handle restart/migration
+        if (updatedGame.status == GameStatus.restarted ||
+            updatedGame.nextGameId != null) {
+          final nextId = updatedGame.nextGameId;
+          if (nextId == null) {
+            // Fallback if no ID is provided
+            setState(() {
+              _status = 'idle';
+              _currentGame = null;
+              _isCreator = false;
+            });
+            return;
+          }
+
+          _service.switchToGame(nextId);
+          // Re-subscribe to the new game
+          _gameSubscription?.cancel();
+
+          _gameSubscription = _service.watchGame(nextId).listen((newGame) {
+            if (!mounted) return;
+
+            if (newGame == null) {
+              // New game not found (e.g. failed creation)
+              setState(() {
+                _status = 'idle';
+                _currentGame = null;
+                _isCreator = false;
+              });
+              return;
+            }
+
+            final bool amCreator =
+                newGame.creatorId == _service.currentPlayerId;
+            setState(() {
+              _currentGame = newGame;
+              _isCreator = amCreator;
+              if (newGame.status != GameStatus.playing) {
+                _status = _isCreator ? 'waiting' : 'queued';
+              }
+            });
+
+            if (newGame.status == GameStatus.playing) {
+              _navigateToGame(newGame);
             }
           });
+          return;
         }
+
+        setState(() {
+          _currentGame = updatedGame;
+          // If we are ended, we stay ended until user leaves or restarts.
+          // But if we are playing, navigate.
+          if (updatedGame.status == GameStatus.playing) {
+            _navigateToGame(updatedGame);
+          }
+        });
       });
     } catch (e) {
       setState(() {
@@ -368,14 +474,75 @@ class _MultiplayerPageState extends State<MultiplayerPage> {
       // Listen to game updates
       _gameSubscription?.cancel();
       _gameSubscription = _service.watchGame(game.gameId).listen((updatedGame) {
-        if (mounted && updatedGame != null) {
+        if (!mounted) return;
+
+        if (updatedGame == null) {
+          // Game ended or cancelled
           setState(() {
-            _currentGame = updatedGame;
-            if (updatedGame.status == GameStatus.playing) {
-              _navigateToGame(updatedGame);
+            _status = 'idle';
+            _currentGame = null;
+            _isCreator = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Game ended', style: GoogleFonts.alexandria()),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+          return;
+        }
+
+        // Handle restart/migration
+        if (updatedGame.status == GameStatus.restarted ||
+            updatedGame.nextGameId != null) {
+          final nextId = updatedGame.nextGameId;
+          if (nextId == null) {
+            setState(() {
+              _status = 'idle';
+              _currentGame = null;
+              _isCreator = false;
+            });
+            return;
+          }
+
+          _service.switchToGame(nextId);
+          _gameSubscription?.cancel();
+
+          _gameSubscription = _service.watchGame(nextId).listen((newGame) {
+            if (!mounted) return;
+
+            if (newGame == null) {
+              setState(() {
+                _status = 'idle';
+                _currentGame = null;
+                _isCreator = false;
+              });
+              return;
+            }
+
+            final bool amCreator =
+                newGame.creatorId == _service.currentPlayerId;
+            setState(() {
+              _currentGame = newGame;
+              _isCreator = amCreator;
+              if (newGame.status != GameStatus.playing) {
+                _status = _isCreator ? 'waiting' : 'queued';
+              }
+            });
+
+            if (newGame.status == GameStatus.playing) {
+              _navigateToGame(newGame);
             }
           });
+          return;
         }
+
+        setState(() {
+          _currentGame = updatedGame;
+          if (updatedGame.status == GameStatus.playing) {
+            _navigateToGame(updatedGame);
+          }
+        });
       });
     } catch (e) {
       setState(() {
@@ -387,12 +554,24 @@ class _MultiplayerPageState extends State<MultiplayerPage> {
 
   Future<void> _leaveGame() async {
     widget.onButtonSound?.call();
+
+    // If creator and in waiting/queued state, cancel the game for everyone
+    if (_isCreator && (_status == 'waiting' || _status == 'queued')) {
+      await _service.cancelGame();
+    } else {
+      // Otherwise just leave normally
+      await _service.leaveGame();
+    }
+
     _gameSubscription?.cancel();
     _gameSubscription = null;
-    await _service.leaveGame();
+
     if (mounted) {
-      // Navigate all the way back to main menu
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      setState(() {
+        _status = 'idle';
+        _currentGame = null;
+        _isCreator = false;
+      });
     }
   }
 
@@ -420,9 +599,9 @@ class _MultiplayerPageState extends State<MultiplayerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.black,
       // Resize to avoid keyboard overlay
-      resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: false,
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -491,7 +670,12 @@ class _MultiplayerPageState extends State<MultiplayerPage> {
     } else if (_status == 'queued') {
       return _buildQueuedState();
     }
-    return Container();
+    return Center(
+      child: Text(
+        "Status: $_status",
+        style: GoogleFonts.pixelifySans(color: Colors.white54),
+      ),
+    );
   }
 
   Widget _buildEndedState() {
@@ -599,18 +783,21 @@ class _MultiplayerPageState extends State<MultiplayerPage> {
                               flex: 2,
                               child: Text(p.name,
                                   style: GoogleFonts.pixelifySans(
-                                      color: Colors.white))),
+                                      color: p.isOnline
+                                          ? Colors.white
+                                          : Colors.redAccent
+                                              .withOpacity(0.7)))),
                           Expanded(
                               child: Text('${p.score}',
-                                  style: GoogleFonts.pixelifySans(
+                                  style: GoogleFonts.alexandria(
                                       color: Colors.cyanAccent))),
                           Expanded(
                               child: Text('${p.fishCount}',
-                                  style: GoogleFonts.pixelifySans(
+                                  style: GoogleFonts.alexandria(
                                       color: Colors.orangeAccent))),
                           Expanded(
                               child: Text('${p.obstaclesHit}',
-                                  style: GoogleFonts.pixelifySans(
+                                  style: GoogleFonts.alexandria(
                                       color: Colors.redAccent))),
                         ],
                       ),
@@ -625,7 +812,7 @@ class _MultiplayerPageState extends State<MultiplayerPage> {
               label: 'PLAY AGAIN / RESTART',
               icon: Icons.replay,
               onPressed: () {
-                _service.restartGame();
+                _service.duplicateGame();
               },
               color: Colors.greenAccent,
             ),
@@ -802,7 +989,7 @@ class _MultiplayerPageState extends State<MultiplayerPage> {
 
           // Player count
           Text(
-            '${_currentGame?.currentPlayers ?? 0} / ${_currentGame?.maxPlayers ?? MultiplayerConstants.kMaxPlayers} Players',
+            '${_currentGame?.players.length ?? 0} / ${_currentGame?.maxPlayers ?? MultiplayerConstants.kMaxPlayers} Players',
             style: GoogleFonts.alexandria(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -879,7 +1066,7 @@ class _MultiplayerPageState extends State<MultiplayerPage> {
 
           // Player count
           Text(
-            '${_currentGame?.currentPlayers ?? 0} / ${_currentGame?.maxPlayers ?? MultiplayerConstants.kMaxPlayers} Players',
+            '${_currentGame?.players.length ?? 0} / ${_currentGame?.maxPlayers ?? MultiplayerConstants.kMaxPlayers} Players',
             style: GoogleFonts.pixelifySans(
               fontSize: 20,
               fontWeight: FontWeight.bold,

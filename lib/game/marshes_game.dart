@@ -69,13 +69,16 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
     await FlameAudio.audioCache.load('music/bg_music_2.mp3');
 
     // Preload audio files - Sound Effects
-    await FlameAudio.audioCache.load('sounds/button_press_1.mp3');
-    await FlameAudio.audioCache.load('sounds/button_press_2.mp3');
-    await FlameAudio.audioCache.load('sounds/button_press_3.mp3');
-    await FlameAudio.audioCache.load('sounds/drowning.mp3');
-    await FlameAudio.audioCache.load('sounds/item_collect.mp3');
-    await FlameAudio.audioCache.load('sounds/bonus_1.mp3');
-    await FlameAudio.audioCache.load('sounds/bonus_2.mp3');
+    await FlameAudio.audioCache.loadAll([
+      'sounds/bonus_1.mp3',
+      'sounds/bonus_2.mp3',
+      'sounds/button_press_1.mp3',
+      'sounds/button_press_2.mp3',
+      'sounds/button_press_3.mp3',
+      'sounds/drowning.mp3',
+      'sounds/item_collect.mp3',
+      'sounds/water_splash.mp3',
+    ]);
 
     // 1. Setup Lanes
     laneWidth = size.x / laneCount;
