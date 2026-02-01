@@ -97,7 +97,19 @@ class LiquidGlassMenu extends StatelessWidget {
             _GlassButton(
                 label: "MULTIPLAYER",
                 onTap: onMultiplayer,
-                onButtonSound: onButtonSound),
+                onButtonSound: onButtonSound,
+                backgroundColor: const Color(0xFF1a0a0a).withOpacity(0.85),
+                gradientBorder: const LinearGradient(
+                  colors: [
+                    Color(0xFFFF6B00), // Deep orange
+                    Color(0xFFFF9500), // Orange
+                    Color(0xFFFFD700), // Gold
+                    Color(0xFFFF9500), // Orange
+                    Color(0xFFFF6B00), // Deep orange
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )),
             const SizedBox(height: 20),
             _GlassButton(
                 label: "OUR TEAM", onTap: onTeam, onButtonSound: onButtonSound),
@@ -117,36 +129,61 @@ class _GlassButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final VoidCallback? onButtonSound;
+  final Gradient? gradientBorder;
+  final Color? backgroundColor;
 
   const _GlassButton({
     required this.label,
     required this.onTap,
     this.onButtonSound,
+    this.gradientBorder,
+    this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
+    final container = Container(
+      width: 200,
+      padding: const EdgeInsets.symmetric(vertical: 15),
+      decoration: BoxDecoration(
+        color: backgroundColor ?? Colors.black.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(15),
+        border: gradientBorder == null
+            ? Border.all(color: Colors.white.withOpacity(0.1))
+            : null,
+      ),
+      child: Center(
+        child: Text(
+          label,
+          style: kGameFont.copyWith(
+              fontSize: 18, color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+
+    if (gradientBorder != null) {
+      return GestureDetector(
+        onTap: () {
+          onButtonSound?.call();
+          onTap();
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: gradientBorder,
+            borderRadius: BorderRadius.circular(17),
+          ),
+          padding: const EdgeInsets.all(2), // Border thickness
+          child: container,
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: () {
         onButtonSound?.call(); // Play button sound if callback provided
         onTap();
       },
-      child: Container(
-        width: 200,
-        padding: const EdgeInsets.symmetric(vertical: 15),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.7),
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: kGameFont.copyWith(
-                fontSize: 18, color: Colors.white, fontWeight: FontWeight.w600),
-          ),
-        ),
-      ),
+      child: container,
     );
   }
 }
