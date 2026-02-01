@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flame/game.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -185,6 +186,10 @@ class _MultiplayerGamePageState extends State<MultiplayerGamePage> {
               const SizedBox(height: 10),
               _dialogButton('MAIN MENU', Colors.red, () async {
                 Navigator.of(ctx).pop(); // Close dialog
+                // Stop game music before leaving
+                FlameAudio.bgm.stop();
+                FlameAudio.bgm.audioPlayer.setPlaybackRate(1.0);
+                FlameAudio.bgm.audioPlayer.setVolume(0.5);
                 await MultiplayerService().leaveGame();
                 if (mounted) {
                   Navigator.of(context).pop('main_menu');
@@ -193,6 +198,10 @@ class _MultiplayerGamePageState extends State<MultiplayerGamePage> {
               const SizedBox(height: 10),
               _dialogButton('LEAVE GAME', Colors.orangeAccent, () async {
                 Navigator.of(ctx).pop(); // Close dialog
+                // Stop game music before leaving
+                FlameAudio.bgm.stop();
+                FlameAudio.bgm.audioPlayer.setPlaybackRate(1.0);
+                FlameAudio.bgm.audioPlayer.setVolume(0.5);
                 await MultiplayerService().leaveGame();
                 if (mounted) {
                   Navigator.of(context)
