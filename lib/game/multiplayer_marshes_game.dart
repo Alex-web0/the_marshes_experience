@@ -186,7 +186,7 @@ class MultiplayerMarshesGame extends FlameGame
 
     // 3. Background
     final parallax = await loadParallaxComponent(
-      [ParallaxImageData('looped_extended.png')],
+      [ParallaxImageData('looped_extended.webp')],
       baseVelocity: Vector2(0, -currentSpeed),
       repeat: ImageRepeat.repeatY,
       fill: LayerFill.width,
@@ -670,7 +670,7 @@ class MultiplayerObstacle extends MultiplayerScrollingObject {
   @override
   Future<void> onLoad() async {
     super.onLoad();
-    final sprite = await game.loadSprite('sugar_cane.png');
+    final sprite = await game.loadSprite('sugar_cane.webp');
     add(SpriteComponent(sprite: sprite, size: size));
     add(RectangleHitbox()..collisionType = CollisionType.passive);
   }
@@ -681,7 +681,7 @@ class MultiplayerFish extends MultiplayerScrollingObject {
   @override
   Future<void> onLoad() async {
     super.onLoad();
-    final sprite = await game.loadSprite('fish_sprite.png');
+    final sprite = await game.loadSprite('fish_sprite.webp');
     add(SpriteComponent(sprite: sprite, size: size));
     add(RectangleHitbox()..collisionType = CollisionType.passive);
   }

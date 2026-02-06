@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Saleh Waleed",
+    "role": "App & Game Developer",
+    "color": "cyan",
+    "avatar": "💻",
+    "imagePath": "assets/team_images/salih_waleed.png",
+    "link": "https://salehwaleed.com"
+  },
+  {
+    "name": "Adil Al-Qabaa",
+    "role": "Project Lead",
+    "color": "teal",
+    "avatar": "🎯",
+    "imagePath": "assets/team_images/adil_alqabaa.png",
+    "link": "https://leda.dev"
+  },
+  {
+    "name": "Ahmed Sinan",
+    "role": "Web Developer",
+    "color": "blue",
+    "avatar": "🌐",
+    "imagePath": "assets/team_images/ahmed_sinan.png",
+    "link": null
+  },
+  {
+    "name": "Hussain Ali",
+    "role": "Photogrammetry expert",
+    "color": "indigo",
+    "avatar": "📷",
+    "imagePath": "assets/team_images/hussain.png",
+    "link": null
+  },
+  {
+    "name": "Sara Ismaeil",
+    "role": "3D Modeling",
+    "color": "amber",
+    "avatar": "🎨",
+    "imagePath": "assets/team_images/sara_ismael.png",
+    "link": null
+  },
+  {
+    "name": "Maryam",
+    "role": "3D Modeling",
+    "color": "purple",
+    "avatar": "✨",
+    "imagePath": null,
+    "link": null
+  },
+  {
+    "name": "Rukaya Al-Qabaa",
+    "role": "Content writer",
+    "color": "pink",
+    "avatar": "✍️",
+    "imagePath": "assets/team_images/ruqaya.png",
+    "link": null
+  },
+  {
+    "name": "Reem Salam",
+    "role": "Content writer",
+    "color": "purple",
+    "avatar": "📝",
+    "imagePath": "assets/team_images/reem_salam.png",
+    "link": null
+  },
+  {
+    "name": "Monther Al-Omari",
+    "role": "Video Editor",
+    "color": "red",
+    "avatar": "🎬",
+    "imagePath": "assets/team_images/monther.png",
+    "link": null
+  },
+  {
+    "name": "Sumaya Naseem",
+    "role": "Archaeologist",
+    "color": "orange",
+    "avatar": "🏺",
+    "imagePath": "assets/team_images/sumaya.png",
+    "link": null
+  },
+  {
+    "name": "Mohammed Al-Halima",
+    "role": "Graphics Designer",
+    "color": "green",
+    "avatar": "🎨",
+    "imagePath": "assets/team_images/mohammed_al_halima.png",
+    "link": null
+  }
+]

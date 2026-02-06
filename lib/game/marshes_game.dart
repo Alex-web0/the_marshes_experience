@@ -85,7 +85,7 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
     // 1.5 Background
     final parallax = await loadParallaxComponent(
       [
-        ParallaxImageData('looped_extended.png'),
+        ParallaxImageData('looped_extended.webp'),
       ],
       baseVelocity: Vector2(0, -currentSpeed), // Vertical scroll
       repeat: ImageRepeat.repeatY,

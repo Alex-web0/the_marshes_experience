@@ -223,9 +223,9 @@ abstract class ScrollingObject extends PositionComponent
 class Obstacle extends ScrollingObject {
   static const double sugarCaneWidth = 80.0; // Fixed width for both variants
   static const double sugarCaneHeight =
-      79.0; // Original height for sugar_cane.png
+      79.0; // Original height for sugar_cane.webp
   static const double sugarCaneHighHeight =
-      87.0; // Original height for sugar_cane_high.png
+      87.0; // Original height for sugar_cane_high.webp
 
   final bool useHighVariant;
 
@@ -242,7 +242,7 @@ class Obstacle extends ScrollingObject {
 
     // Load the appropriate sugar cane sprite
     final spriteName =
-        useHighVariant ? 'sugar_cane_high.png' : 'sugar_cane.png';
+        useHighVariant ? 'sugar_cane_high.webp' : 'sugar_cane.webp';
     final sprite = await game.loadSprite(spriteName);
 
     add(SpriteComponent(
@@ -267,7 +267,7 @@ class FishCollectible extends Collectible {
     super.onLoad();
 
     // Load and add fish sprite
-    final fishSprite = await game.loadSprite('fish_sprite.png');
+    final fishSprite = await game.loadSprite('fish_sprite.webp');
     add(SpriteComponent(
       sprite: fishSprite,
       size: size,
