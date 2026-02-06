@@ -60,6 +60,8 @@ class LiquidGlassMenu extends StatelessWidget {
   final VoidCallback onTeam;
   final VoidCallback onVisitWebsite;
   final VoidCallback? onButtonSound; // Optional callback for button sounds
+  final VoidCallback?
+      onDebugStoryline; // Optional debug button for testing storylines
 
   const LiquidGlassMenu({
     required this.onPlay,
@@ -67,6 +69,7 @@ class LiquidGlassMenu extends StatelessWidget {
     required this.onTeam,
     required this.onVisitWebsite,
     this.onButtonSound,
+    this.onDebugStoryline,
     super.key,
   });
 
@@ -118,6 +121,27 @@ class LiquidGlassMenu extends StatelessWidget {
                 label: "VISIT WEBSITE",
                 onTap: onVisitWebsite,
                 onButtonSound: onButtonSound),
+            // Debug button (only visible in debug mode)
+            if (onDebugStoryline != null) ...[
+              const SizedBox(height: 20),
+              _GlassButton(
+                label: "🐛 TEST STORIES",
+                onTap: onDebugStoryline!,
+                onButtonSound: onButtonSound,
+                backgroundColor: const Color(0xFF1a1a2e).withOpacity(0.85),
+                gradientBorder: const LinearGradient(
+                  colors: [
+                    Color(0xFF00ff00),
+                    Color(0xFF00cc00),
+                    Color(0xFF009900),
+                    Color(0xFF00cc00),
+                    Color(0xFF00ff00),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ],
           ],
         ),
       ),

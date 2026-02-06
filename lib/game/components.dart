@@ -1,8 +1,9 @@
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flutter/material.dart';
+import 'dart:math';
 import 'marshes_game.dart';
-import '../data/heritage_repository.dart';
+import '../data/storyline_repository.dart';
 
 // --- Constants ---
 const double kBaseSize = 64.0; // x64 Pixel Art Scale
@@ -109,11 +110,11 @@ class BoatPlayer extends PositionComponent
       isTransitioning = false; // Cancel any lane transition
       // Reverse steering: Positive X (Left Tilt) -> Move Left (Decrease X)
       x -= _currentTilt * kTiltSensitivity * dt;
-      
+
       // Clamp to screen
       final halfWidth = size.x / 2;
       x = x.clamp(halfWidth, game.size.x - halfWidth);
-    } 
+    }
     // Fallback to lane logic (e.g. for keyboard)
     else if (isTransitioning && (x - targetX).abs() > 1) {
       double direction = targetX > x ? 1 : -1;
@@ -314,31 +315,31 @@ class StoryCollectible extends Collectible {
     // Play random bonus sound for chest acquisition
     game.playBonusSound();
 
-    // // Change to open box sprite
-    // final openBoxSprite = await game.loadSpriteAnimation(
-    //     'box_open.png',
-    //     SpriteAnimationData.sequenced(
-    //       amount: 5,
-    //       stepTime: 0.05,
-    //       textureSize: Vector2(64, 64),
-    //     ));
-    // _boxSprite.animation = openBoxSprite;
-
     // Wait for a short animation delay (box opening)
     await Future.delayed(const Duration(milliseconds: 300));
 
     // Remove the box
     removeFromParent();
 
-    // Trigger story dialog
-    game.incrementStoryCount();
-    game.heritageRepository.getRandomFact().then((fact) {
-      game.pauseForStory(fact);
-    });
-  }
-}
+    // Trigger interactive storyline based on player progress
+    final storylineRepo = StorylineRepository();
+    final availableStories = storylineRepo.getAvailableStories(
+      fishCount: game.fishCount,
+      storyCount: game.storyCount,
+    );
 
-extension on MarshesGame {
-  // Helper to access repo easily
-  HeritageRepository get heritageRepository => HeritageRepository();
+    if (availableStories.isNotEmpty) {
+      // Pick a random available story
+      final random = Random();
+      final selectedStory =
+          availableStories[random.nextInt(availableStories.length)];
+
+      // Trigger the interactive storyline
+      game.pauseForStoryline(selectedStory.id);
+    } else {
+      // Fallback: if no stories available, give bonus points
+      game.incrementStoryCount();
+      game.resumeGame();
+    }
+  }
 }

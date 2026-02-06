@@ -9,7 +9,6 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import '../data/heritage_repository.dart';
 import '../data/audio_manager.dart';
 import 'components.dart';
 
@@ -42,7 +41,7 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
 
   // Callbacks for UI
   final Function(int score, int fish, int stories) onGameOver;
-  final Function(HeritageFact) onStoryTrigger;
+  final Function(String storyId) onStorylineTriggered; // Interactive storylines
   final Function(int) onScoreUpdate;
   final Function(int) onHealthUpdate;
   final Function(int) onFishCountUpdate;
@@ -51,7 +50,7 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
 
   MarshesGame({
     required this.onGameOver,
-    required this.onStoryTrigger,
+    required this.onStorylineTriggered,
     required this.onScoreUpdate,
     required this.onHealthUpdate,
     required this.onFishCountUpdate,
@@ -292,12 +291,13 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
     int lane = rand.nextInt(laneCount);
     double xPos = lane * laneWidth + (laneWidth / 2);
 
-    // 10% Chance for Story Item (?), 30% for Fish, 60% for Obstacle
+    // 18% Chest (Interactive Storyline), 30% Fish, 52% Obstacle
     double roll = rand.nextDouble();
 
-    if (roll < 0.1) {
+    if (roll < 0.18) {
+      // Interactive storyline chest
       add(StoryCollectible()..position = Vector2(xPos, -100));
-    } else if (roll < 0.4) {
+    } else if (roll < 0.48) {
       add(FishCollectible()..position = Vector2(xPos, -100));
     } else {
       // 65% chance for regular sugar_cane, 35% for sugar_cane_high
@@ -388,10 +388,10 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
     onStoryCountUpdate(storyCount);
   }
 
-  void pauseForStory(HeritageFact fact) {
+  void pauseForStoryline(String storyId) {
     isPlaying = false; // Pause updates
-    pauseBackgroundMusic(); // Pause music during story
-    onStoryTrigger(fact);
+    pauseBackgroundMusic(); // Pause music during storyline
+    onStorylineTriggered(storyId);
   }
 
   void resumeGame() {

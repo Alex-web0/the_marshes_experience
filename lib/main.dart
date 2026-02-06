@@ -11,9 +11,11 @@ import 'ui/team_page.dart';
 import 'ui/pause_menu.dart';
 import 'ui/mute_button.dart';
 import 'ui/multiplayer_page.dart';
-import 'data/heritage_repository.dart';
+import 'ui/debug_storyline_menu.dart';
+import 'ui/storyline_dialog.dart';
 import 'data/score_repository.dart';
 import 'data/audio_manager.dart';
+import 'data/storyline_repository.dart';
 import 'domain/game_stats.dart';
 
 void main() async {
@@ -59,7 +61,10 @@ class _GameContainerState extends State<GameContainer> {
   bool _showTeamPage = false; // Team page state
   bool _showMultiplayerPage = false; // Multiplayer page state
   bool _showPauseMenu = false; // Pause menu state
-  HeritageFact? _activeStory;
+  bool _showDebugStorylineMenu = false; // Debug storyline menu state
+  String? _activeStorylineId; // Active storyline being viewed
+  bool _activeStorylineFromGame =
+      false; // Track if storyline came from gameplay
   int _score = 0;
   int _fishCount = 0;
   int _storyCount = 0; // Stories encountered counter
@@ -67,13 +72,18 @@ class _GameContainerState extends State<GameContainer> {
   bool _gameOver = false;
   GameStats? _lastStats; // Store stats for game over
   final ScoreRepository _scoreRepository = LocalScoreRepository();
+  final StorylineRepository _storylineRepository = StorylineRepository();
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize storyline repository
+    _storylineRepository.initialize();
+
     _game = MarshesGame(
       onGameOver: _handleGameOver,
-      onStoryTrigger: _showStoryDialog,
+      onStorylineTriggered: _showGameStoryline,
       onScoreUpdate: (s) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) setState(() => _score = s);
@@ -119,19 +129,6 @@ class _GameContainerState extends State<GameContainer> {
       _showMenu =
           false; // We use GameOverMenu explicitly distinct from MainMenu if we want
     });
-  }
-
-  void _showStoryDialog(HeritageFact fact) {
-    setState(() {
-      _activeStory = fact;
-    });
-  }
-
-  void _dismissStory() {
-    setState(() {
-      _activeStory = null;
-    });
-    _game.resumeGame();
   }
 
   void _showPauseDialog() {
@@ -214,6 +211,72 @@ class _GameContainerState extends State<GameContainer> {
     });
   }
 
+  void _showDebugStorylines() {
+    setState(() {
+      _showDebugStorylineMenu = true;
+      _showMenu = false;
+    });
+  }
+
+  void _hideDebugStorylines() {
+    setState(() {
+      _showDebugStorylineMenu = false;
+      _showMenu = true;
+    });
+  }
+
+  void _showStoryline(String storyId) {
+    setState(() {
+      _activeStorylineId = storyId;
+      _activeStorylineFromGame = false;
+      _showDebugStorylineMenu = false;
+    });
+  }
+
+  void _showGameStoryline(String storyId) {
+    setState(() {
+      _activeStorylineId = storyId;
+      _activeStorylineFromGame = true;
+    });
+  }
+
+  void _closeStoryline() {
+    final wasFromGame = _activeStorylineFromGame;
+    setState(() {
+      _activeStorylineId = null;
+      _activeStorylineFromGame = false;
+      if (!wasFromGame) {
+        _showMenu = true;
+      }
+    });
+
+    // Resume game if storyline was triggered during gameplay
+    if (wasFromGame) {
+      _game.resumeGame();
+    }
+  }
+
+  void _handleStorylineRewards(Map<String, int>? rewards) {
+    if (rewards == null) return;
+
+    setState(() {
+      if (rewards['score'] != null) {
+        _score += rewards['score']!;
+      }
+      if (rewards['fishCount'] != null) {
+        _fishCount += rewards['fishCount']!;
+      }
+      if (rewards['storyCount'] != null) {
+        _storyCount += rewards['storyCount']!;
+      }
+    });
+
+    // If storyline was from gameplay, also update game state
+    if (_activeStorylineFromGame && rewards['storyCount'] != null) {
+      _game.incrementStoryCount();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -230,7 +293,7 @@ class _GameContainerState extends State<GameContainer> {
               ),
 
               // 2. HUD LAYER (Only when playing)
-              if (!_showMenu && _activeStory == null && !_showPauseMenu)
+              if (!_showMenu && !_showPauseMenu)
                 Positioned(
                   top: 40,
                   left: 20,
@@ -306,7 +369,6 @@ class _GameContainerState extends State<GameContainer> {
 
               // 2.5. On-screen Controls (Web/Desktop or if Gyro fails fallback)
               if (!_showMenu &&
-                  _activeStory == null &&
                   !_showPauseMenu &&
                   (kIsWeb ||
                       defaultTargetPlatform == TargetPlatform.windows ||
@@ -362,6 +424,7 @@ class _GameContainerState extends State<GameContainer> {
                   onVisitWebsite: () =>
                       launchUrl(Uri.parse('https://heritage.alqaba.com')),
                   onButtonSound: _game.playButtonSound,
+                  onDebugStoryline: kDebugMode ? _showDebugStorylines : null,
                 ),
 
               // 3.1. MUTE BUTTON (Main Menu)
@@ -423,12 +486,23 @@ class _GameContainerState extends State<GameContainer> {
                   ),
                 ),
 
-              // 4. DIALOG LAYER
-              if (_activeStory != null)
-                HeritageStoryDialog(
-                  fact: _activeStory!,
-                  onDismiss: _dismissStory,
-                  onButtonSound: _game.playButtonSound,
+              // 4. DEBUG STORYLINE MENU
+              if (_showDebugStorylineMenu)
+                Center(
+                  child: DebugStorylineMenu(
+                    onStorySelected: _showStoryline,
+                    onClose: _hideDebugStorylines,
+                  ),
+                ),
+
+              // 5. ACTIVE STORYLINE DIALOG
+              if (_activeStorylineId != null)
+                Center(
+                  child: StorylineDialog(
+                    storyElementId: _activeStorylineId!,
+                    onComplete: _closeStoryline,
+                    onRewardsEarned: _handleStorylineRewards,
+                  ),
                 ),
             ],
           ),
