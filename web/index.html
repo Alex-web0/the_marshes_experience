@@ -1,7 +1,7 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <!--
+  <head>
+    <!--
     If you are serving your web app in a path other than the root, change the
     href value below to reflect the base path you are serving from.
 
@@ -14,91 +14,140 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-  <base href="$FLUTTER_BASE_HREF">
+    <base href="$FLUTTER_BASE_HREF" />
 
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <!-- Primary Meta Tags -->
-  <meta name="title" content="The Marshes Experience - Al-Chibayish Heritage Game">
-  <meta name="description" content="Journey through the historic Al-Chibayish Marshes of Iraq. Explore rich heritage, meet water buffalo, learn ancient fishing traditions, and discover the UNESCO World Heritage site through interactive storytelling. Experience authentic marsh culture and traditions.">
-  <meta name="keywords" content="Al-Chibayish, Iraq Marshes, Mesopotamian Marshes, Heritage Game, UNESCO World Heritage, Water Buffalo, Mashhuf Boat, Reed Houses, Mudhif, Iraqi Culture, Educational Game, Interactive Story">
-  <meta name="author" content="The Marshes Experience Team">
-  <meta name="theme-color" content="#2a5f3f">
+    <meta charset="UTF-8" />
+    <meta content="IE=Edge" http-equiv="X-UA-Compatible" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Open Graph / Facebook -->
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://the-marshes-experience.web.app/">
-  <meta property="og:title" content="The Marshes Experience - Al-Chibayish Heritage Game">
-  <meta property="og:description" content="Journey through the historic Al-Chibayish Marshes of Iraq. Explore rich heritage, meet water buffalo, learn ancient fishing traditions, and discover the UNESCO World Heritage site through interactive storytelling.">
-  <meta property="og:image" content="https://the-marshes-experience.web.app/icons/Icon-512.png">
-  <meta property="og:image:width" content="512">
-  <meta property="og:image:height" content="512">
-  <meta property="og:image:alt" content="The Marshes Experience - Explore Al-Chibayish Heritage">
-  <meta property="og:site_name" content="The Marshes Experience">
-  <meta property="og:locale" content="en_US">
+    <!-- Primary Meta Tags -->
+    <meta
+      name="title"
+      content="The Marshes Experience - Al-Chibayish Heritage Game"
+    />
+    <meta
+      name="description"
+      content="Journey through the historic Al-Chibayish Marshes of Iraq. Explore rich heritage, meet water buffalo, learn ancient fishing traditions, and discover the UNESCO World Heritage site through interactive storytelling. Experience authentic marsh culture and traditions."
+    />
+    <meta
+      name="keywords"
+      content="Al-Chibayish, Iraq Marshes, Mesopotamian Marshes, Heritage Game, UNESCO World Heritage, Water Buffalo, Mashhuf Boat, Reed Houses, Mudhif, Iraqi Culture, Educational Game, Interactive Story"
+    />
+    <meta name="author" content="The Marshes Experience Team" />
+    <meta name="theme-color" content="#2a5f3f" />
 
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:url" content="https://the-marshes-experience.web.app/">
-  <meta name="twitter:title" content="The Marshes Experience - Al-Chibayish Heritage Game">
-  <meta name="twitter:description" content="Journey through the historic Al-Chibayish Marshes. Explore heritage, meet water buffalo, learn ancient traditions through interactive storytelling.">
-  <meta name="twitter:image" content="https://the-marshes-experience.web.app/icons/Icon-512.png">
-  <meta name="twitter:image:alt" content="The Marshes Experience Game">
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://the-marshes-experience.web.app/" />
+    <meta
+      property="og:title"
+      content="The Marshes Experience - Al-Chibayish Heritage Game"
+    />
+    <meta
+      property="og:description"
+      content="Journey through the historic Al-Chibayish Marshes of Iraq. Explore rich heritage, meet water buffalo, learn ancient fishing traditions, and discover the UNESCO World Heritage site through interactive storytelling."
+    />
+    <meta
+      property="og:image"
+      content="https://the-marshes-experience.web.app/icons/Icon-512.png"
+    />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta
+      property="og:image:alt"
+      content="The Marshes Experience - Explore Al-Chibayish Heritage"
+    />
+    <meta property="og:site_name" content="The Marshes Experience" />
+    <meta property="og:locale" content="en_US" />
 
-  <!-- Additional Meta Tags -->
-  <meta name="application-name" content="The Marshes Experience">
-  <meta name="apple-mobile-web-app-title" content="Marshes Experience">
-  <meta name="format-detection" content="telephone=no">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:url"
+      content="https://the-marshes-experience.web.app/"
+    />
+    <meta
+      name="twitter:title"
+      content="The Marshes Experience - Al-Chibayish Heritage Game"
+    />
+    <meta
+      name="twitter:description"
+      content="Journey through the historic Al-Chibayish Marshes. Explore heritage, meet water buffalo, learn ancient traditions through interactive storytelling."
+    />
+    <meta
+      name="twitter:image"
+      content="https://the-marshes-experience.web.app/icons/Icon-512.png"
+    />
+    <meta name="twitter:image:alt" content="The Marshes Experience Game" />
 
-  <!-- iOS meta tags & icons -->
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png">
-  <link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-512.png">
+    <!-- Additional Meta Tags -->
+    <meta name="application-name" content="The Marshes Experience" />
+    <meta name="apple-mobile-web-app-title" content="Marshes Experience" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png"/>
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/Icon-512.png"/>
-  <link rel="icon" type="image/png" href="favicon.png"/>
-  <link rel="shortcut icon" href="favicon.png">
+    <!-- iOS meta tags & icons -->
+    <link rel="apple-touch-icon" href="icons/Icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-512.png" />
 
-  <!-- Canonical URL -->
-  <link rel="canonical" href="https://the-marshes-experience.web.app/">
+    <!-- Favicon -->
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="icons/Icon-192.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="512x512"
+      href="icons/Icon-512.png"
+    />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="shortcut icon" href="favicon.png" />
 
-  <title>The Marshes Experience - Al-Chibayish Heritage Game | Explore Iraqi Marshlands</title>
-  <link rel="manifest" href="manifest.json">
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://the-marshes-experience.web.app/" />
 
-  <!-- Structured Data (JSON-LD) -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "The Marshes Experience",
-    "alternateName": "Al-Chibayish Heritage Game",
-    "description": "Journey through the historic Al-Chibayish Marshes of Iraq. Explore rich heritage, meet water buffalo, learn ancient fishing traditions, and discover the UNESCO World Heritage site through interactive storytelling.",
-    "url": "https://the-marshes-experience.web.app/",
-    "applicationCategory": "Game",
-    "applicationSubCategory": "Educational Game",
-    "operatingSystem": "Web Browser",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "keywords": "Al-Chibayish, Iraq Marshes, Mesopotamian Marshes, Heritage, UNESCO, Educational Game",
-    "inLanguage": "en",
-    "potentialAction": {
-      "@type": "PlayAction",
-      "target": "https://the-marshes-experience.web.app/"
-    }
-  }
-  </script>
-</head>
-<body>
-  <script src="flutter_bootstrap.js" async></script>
-</body>
+    <title>
+      The Marshes Experience - Al-Chibayish Heritage Game | Explore Iraqi
+      Marshlands
+    </title>
+    <link rel="manifest" href="manifest.json" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "The Marshes Experience",
+        "alternateName": "Al-Chibayish Heritage Game",
+        "description": "Journey through the historic Al-Chibayish Marshes of Iraq. Explore rich heritage, meet water buffalo, learn ancient fishing traditions, and discover the UNESCO World Heritage site through interactive storytelling.",
+        "url": "https://the-marshes-experience.web.app/",
+        "applicationCategory": "Game",
+        "applicationSubCategory": "Educational Game",
+        "operatingSystem": "Web Browser",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "keywords": "Al-Chibayish, Iraq Marshes, Mesopotamian Marshes, Heritage, UNESCO, Educational Game",
+        "inLanguage": "en",
+        "potentialAction": {
+          "@type": "PlayAction",
+          "target": "https://the-marshes-experience.web.app/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <script src="flutter_bootstrap.js" async></script>
+  </body>
 </html>
