@@ -87,7 +87,7 @@ class BoatPlayer extends PositionComponent
       size: Vector2(kPlayerWidth - (kPlayerWidth * 0.1205),
           kPlayerHeight / 1.78), // Full player size
     );
-    hitbox.renderShape = true; // Enable debug rendering
+    hitbox.renderShape = false; // Disable debug rendering in production
     hitbox.paint = Paint()
       ..color = Colors.cyan.withOpacity(0.5)
       ..style = PaintingStyle.stroke
