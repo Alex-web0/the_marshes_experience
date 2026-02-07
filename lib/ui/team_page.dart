@@ -168,7 +168,8 @@ class _TeamPageState extends State<TeamPage> {
     );
   }
 
-  void _showImageDialog(BuildContext context, String imagePath, String name, Color color) {
+  void _showImageDialog(
+      BuildContext context, String imagePath, String name, Color color) {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -221,7 +222,8 @@ class _TeamPageState extends State<TeamPage> {
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                            icon: const Icon(Icons.close,
+                                color: Colors.white, size: 28),
                             onPressed: () => Navigator.of(context).pop(),
                           ),
                         ],
@@ -285,7 +287,7 @@ class _TeamPageState extends State<TeamPage> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isSmallScreen = constraints.maxWidth < 300;
-            
+
             if (isSmallScreen) {
               // Column layout for small screens
               return Column(
@@ -295,7 +297,8 @@ class _TeamPageState extends State<TeamPage> {
                     onTap: member.imagePath != null
                         ? () {
                             widget.onButtonSound?.call();
-                            _showImageDialog(context, member.imagePath!, member.name, color);
+                            _showImageDialog(
+                                context, member.imagePath!, member.name, color);
                           }
                         : null,
                     child: Container(
@@ -403,7 +406,8 @@ class _TeamPageState extends State<TeamPage> {
                     onTap: member.imagePath != null
                         ? () {
                             widget.onButtonSound?.call();
-                            _showImageDialog(context, member.imagePath!, member.name, color);
+                            _showImageDialog(
+                                context, member.imagePath!, member.name, color);
                           }
                         : null,
                     child: Container(
