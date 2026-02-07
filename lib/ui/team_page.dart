@@ -185,53 +185,57 @@ class _TeamPageState extends State<TeamPage> {
                 parent: animation,
                 curve: Curves.easeOutBack,
               ),
-              child: Container(
-                margin: const EdgeInsets.all(40),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0A1628),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: color.withOpacity(0.5),
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: 30,
-                      spreadRadius: 5,
-                    ),
-                  ],
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.8,
+                  maxHeight: MediaQuery.of(context).size.height * 0.7,
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Header with name and close button
-                    Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              name,
-                              style: GoogleFonts.pixelifySans(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 1,
+                child: Container(
+                  margin: const EdgeInsets.all(40),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0A1628),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: color.withOpacity(0.5),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.3),
+                        blurRadius: 30,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header with name and close button
+                      Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: GoogleFonts.pixelifySans(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: 1,
+                                ),
                               ),
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close,
-                                color: Colors.white, size: 28),
-                            onPressed: () => Navigator.of(context).pop(),
-                          ),
-                        ],
+                            IconButton(
+                              icon: const Icon(Icons.close,
+                                  color: Colors.white, size: 28),
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    // Large image
-                    Flexible(
-                      child: Padding(
+                      // Large image
+                      Padding(
                         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16),
@@ -241,8 +245,8 @@ class _TeamPageState extends State<TeamPage> {
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

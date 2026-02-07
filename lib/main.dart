@@ -16,15 +16,24 @@ import 'ui/storyline_dialog.dart';
 import 'data/score_repository.dart';
 import 'data/audio_manager.dart';
 import 'data/storyline_repository.dart';
+import 'data/storyline/local_storyline_provider.dart';
 import 'domain/game_stats.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize audio manager
   await AudioManager().initialize();
 
+  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialize storyline repository with local data provider
+  // This loads all story content in the background
+  final storylineProvider = LocalStorylineProvider();
+  await StorylineRepository().initialize(storylineProvider);
 
   runApp(const MyApp());
 }
@@ -78,8 +87,8 @@ class _GameContainerState extends State<GameContainer> {
   void initState() {
     super.initState();
 
-    // Initialize storyline repository
-    _storylineRepository.initialize();
+    // Storyline repository is already initialized in main()
+    // No need to initialize again here
 
     _game = MarshesGame(
       onGameOver: _handleGameOver,

@@ -223,18 +223,21 @@ class _StorylineDialogState extends State<StorylineDialog>
                           children: [
                             CircleAvatar(
                               radius: 25,
-                              backgroundColor: _currentCharacter != null
-                                  ? Colors.amber
-                                  : Colors.grey.shade700,
-                              child: Text(
-                                _currentCharacter?.name[0].toUpperCase() ??
-                                    '📖',
-                                style: GoogleFonts.pixelifySans(
-                                  fontSize: 24,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              backgroundColor: Colors.grey.shade800,
+                              backgroundImage:
+                                  _currentCharacter?.imagePath != null
+                                      ? AssetImage(_currentCharacter!.imagePath)
+                                      : null,
+                              child: _currentCharacter?.imagePath == null
+                                  ? Text(
+                                      '📖',
+                                      style: GoogleFonts.pixelifySans(
+                                        fontSize: 24,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(width: 12),
                             Expanded(
