@@ -1,5 +1,21 @@
 [
   {
+    "name": "Dr. Basim Mahmood",
+    "role": "Supervisor",
+    "color": "gold",
+    "avatar": "🎓",
+    "imagePath": "assets/team_images/dr_bassim.png",
+    "link": null
+  },
+  {
+    "name": "Dr. Zuhair",
+    "role": "Supervisor",
+    "color": "gold",
+    "avatar": "🎓",
+    "imagePath": "assets/team_images/dr_zuhair.png",
+    "link": null
+  },
+  {
     "name": "Saleh Waleed",
     "role": "App & Game Developer",
     "color": "cyan",
@@ -8,12 +24,12 @@
     "link": "https://salehwaleed.com"
   },
   {
-    "name": "Adil Al-Qabaa",
+    "name": "Adil Al Qabaa",
     "role": "Project Lead",
     "color": "teal",
     "avatar": "🎯",
     "imagePath": "assets/team_images/adil_alqabaa.png",
-    "link": "https://leda.dev"
+    "link": "https://alqaba.com"
   },
   {
     "name": "Ahmed Sinan",
