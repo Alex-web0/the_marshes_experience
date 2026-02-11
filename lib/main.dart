@@ -13,10 +13,13 @@ import 'ui/mute_button.dart';
 import 'ui/multiplayer_page.dart';
 import 'ui/debug_storyline_menu.dart';
 import 'ui/storyline_dialog.dart';
+import 'ui/app_download_sheet.dart';
 import 'data/score_repository.dart';
 import 'data/audio_manager.dart';
 import 'data/storyline_repository.dart';
 import 'data/storyline/local_storyline_provider.dart';
+import 'data/auth_service.dart';
+import 'data/remote_config_service.dart';
 import 'domain/game_stats.dart';
 
 void main() async {
@@ -29,6 +32,12 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialize anonymous authentication (foolproof, auto-retries)
+  await AuthService().ensureAuthenticated();
+
+  // Initialize Remote Config (fetches google_play_link, app_store_link)
+  await RemoteConfigService().initialize();
 
   // Initialize storyline repository with local data provider
   // This loads all story content in the background
@@ -80,8 +89,12 @@ class _GameContainerState extends State<GameContainer> {
   int _lives = 3;
   bool _gameOver = false;
   GameStats? _lastStats; // Store stats for game over
+  bool _showDownloadSheet = false; // App download sheet state
   final ScoreRepository _scoreRepository = LocalScoreRepository();
   final StorylineRepository _storylineRepository = StorylineRepository();
+
+  // Static flag: ensures download sheet is shown at most once per app lifecycle
+  static bool _downloadSheetShown = false;
 
   @override
   void initState() {
@@ -123,7 +136,26 @@ class _GameContainerState extends State<GameContainer> {
           _game.playMenuMusic();
         }
       });
+
+      // Show app download sheet on web (once per app lifecycle)
+      if (kIsWeb && !_downloadSheetShown) {
+        _checkAndShowDownloadSheet();
+      }
     });
+  }
+
+  /// Check Remote Config for valid app store links and show the download sheet.
+  void _checkAndShowDownloadSheet() {
+    final rcService = RemoteConfigService();
+    if (rcService.hasValidLinks()) {
+      _downloadSheetShown = true;
+      // Small delay so menu renders first
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) {
+          setState(() => _showDownloadSheet = true);
+        }
+      });
+    }
   }
 
   void _handleGameOver(int score, int fish, int stories) {
@@ -516,6 +548,15 @@ class _GameContainerState extends State<GameContainer> {
                     onComplete: _closeStoryline,
                     onRewardsEarned: _handleStorylineRewards,
                   ),
+                ),
+
+              // 6. APP DOWNLOAD SHEET (Web only, once per lifecycle)
+              if (_showDownloadSheet)
+                AppDownloadSheet(
+                  googlePlayLink: RemoteConfigService().getGooglePlayLink(),
+                  appStoreLink: RemoteConfigService().getAppStoreLink(),
+                  onDismiss: () => setState(() => _showDownloadSheet = false),
+                  onButtonSound: _game.playButtonSound,
                 ),
             ],
           ),
