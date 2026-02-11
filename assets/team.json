@@ -80,6 +80,14 @@
     "link": null
   },
   {
+    "name": "Mohammed Al-Halima",
+    "role": "Graphics Designer",
+    "color": "green",
+    "avatar": "🎨",
+    "imagePath": "assets/team_images/mohammed_al_halima.png",
+    "link": null
+  },
+  {
     "name": "Monther Al-Omari",
     "role": "Video Editor",
     "color": "red",
@@ -93,14 +101,6 @@
     "color": "orange",
     "avatar": "🏺",
     "imagePath": "assets/team_images/sumaya.png",
-    "link": null
-  },
-  {
-    "name": "Mohammed Al-Halima",
-    "role": "Graphics Designer",
-    "color": "green",
-    "avatar": "🎨",
-    "imagePath": "assets/team_images/mohammed_al_halima.png",
     "link": null
   }
 ]
