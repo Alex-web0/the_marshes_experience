@@ -84,7 +84,7 @@ class _AppDownloadSheetState extends State<AppDownloadSheet>
       child: GestureDetector(
         onTap: _dismiss,
         child: Container(
-          color: Colors.black.withOpacity(0.4),
+          color: Colors.black.withOpacity(0.8),
           child: GestureDetector(
             onTap: () {}, // Block taps from passing through
             child: SlideTransition(
@@ -96,12 +96,12 @@ class _AppDownloadSheetState extends State<AppDownloadSheet>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(24),
                     child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 15),
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.65),
+                          color: Colors.black.withOpacity(0.82),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
                             color: Colors.white.withOpacity(0.2),
