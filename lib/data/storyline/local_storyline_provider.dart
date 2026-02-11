@@ -1006,7 +1006,7 @@ class LocalStorylineProvider implements StorylineDataProvider {
       id: 'marsh_resident',
       name: 'Um Ali',
       personality: 'Elder woman who grew up on floating houses',
-      imagePath: 'assets/images/fisherman_avatar.png',
+      imagePath: '', // No avatar - narrator style
     );
 
     final intro = StoryParagraph(

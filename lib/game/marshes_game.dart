@@ -291,13 +291,13 @@ class MarshesGame extends FlameGame with HasCollisionDetection, KeyboardEvents {
     int lane = rand.nextInt(laneCount);
     double xPos = lane * laneWidth + (laneWidth / 2);
 
-    // 36% Chest (Interactive Storyline), 30% Fish, 34% Obstacle
+    // 22% Chest (Interactive Storyline), 30% Fish, 48% Obstacle
     double roll = rand.nextDouble();
 
-    if (roll < 0.36) {
+    if (roll < 0.22) {
       // Interactive storyline chest
       add(StoryCollectible()..position = Vector2(xPos, -100));
-    } else if (roll < 0.66) {
+    } else if (roll < 0.52) {
       add(FishCollectible()..position = Vector2(xPos, -100));
     } else {
       // 65% chance for regular sugar_cane, 35% for sugar_cane_high

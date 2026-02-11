@@ -1,5 +1,6 @@
 import '../domain/storyline_models.dart';
 import 'storyline/storyline_data_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Repository for managing storyline elements and player story progress
 ///
@@ -20,8 +21,14 @@ class StorylineRepository {
   // Player's progress through each story
   final Map<String, StoryProgress> _playerProgress = {};
 
+  // Tracking which stories have been viewed (for rotation system)
+  final Set<String> _viewedStoryIds = {};
+
   // Initialization state
   bool _isInitialized = false;
+
+  // SharedPreferences key for viewed stories
+  static const String _viewedStoriesKey = 'viewed_story_ids';
 
   /// Initializes the repository with a data provider
   ///
@@ -36,7 +43,66 @@ class StorylineRepository {
     final stories = await _dataProvider!.loadStorylineElements();
     _storylineElements.addAll(stories);
 
+    // Load viewed stories from cache
+    await _loadViewedStoriesFromCache();
+
     _isInitialized = true;
+  }
+
+  /// Loads viewed story IDs from SharedPreferences cache
+  Future<void> _loadViewedStoriesFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final viewedList = prefs.getStringList(_viewedStoriesKey) ?? [];
+      _viewedStoryIds.addAll(viewedList);
+    } catch (e) {
+      // If loading fails, continue with empty set
+      print('Error loading viewed stories from cache: $e');
+    }
+  }
+
+  /// Saves viewed story IDs to SharedPreferences cache
+  Future<void> _saveViewedStoriesToCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_viewedStoriesKey, _viewedStoryIds.toList());
+    } catch (e) {
+      print('Error saving viewed stories to cache: $e');
+    }
+  }
+
+  /// Marks a story as viewed and saves to cache
+  Future<void> markStoryAsViewed(String storyElementId) async {
+    _viewedStoryIds.add(storyElementId);
+    await _saveViewedStoriesToCache();
+
+    // If all stories have been viewed, reset the viewed list
+    if (_viewedStoryIds.length >= _storylineElements.length) {
+      await resetViewedStories();
+    }
+  }
+
+  /// Resets the viewed stories list (starts rotation over)
+  Future<void> resetViewedStories() async {
+    _viewedStoryIds.clear();
+    await _saveViewedStoriesToCache();
+  }
+
+  /// Gets stories that haven't been viewed yet
+  List<StorylineElement> getUnviewedStories() {
+    return _storylineElements.values
+        .where((story) => !_viewedStoryIds.contains(story.id))
+        .toList();
+  }
+
+  /// Checks if a story has been viewed
+  bool hasStoryBeenViewed(String storyElementId) {
+    return _viewedStoryIds.contains(storyElementId);
+  }
+
+  /// Gets the count of viewed stories
+  int getViewedStoriesCount() {
+    return _viewedStoryIds.length;
   }
 
   /// Checks if the repository has been initialized
@@ -56,11 +122,13 @@ class StorylineRepository {
   /// Gets storyline elements that match the player's current requirements
   ///
   /// Filters stories based on trigger requirements (e.g., fish count, story count)
+  /// Prioritizes unviewed stories - only returns viewed stories if all have been seen
   List<StorylineElement> getAvailableStories({
     required int fishCount,
     required int storyCount,
   }) {
-    return _storylineElements.values.where((story) {
+    // First, filter by requirements
+    final eligibleStories = _storylineElements.values.where((story) {
       if (story.triggerRequirements == null) return true;
 
       final reqs = story.triggerRequirements!;
@@ -73,6 +141,15 @@ class StorylineRepository {
 
       return true;
     }).toList();
+
+    // Prioritize unviewed stories
+    final unviewedEligible = eligibleStories
+        .where((story) => !_viewedStoryIds.contains(story.id))
+        .toList();
+
+    // If there are unviewed stories, return only those
+    // Otherwise, return all eligible (rotation restarts automatically)
+    return unviewedEligible.isNotEmpty ? unviewedEligible : eligibleStories;
   }
 
   /// Starts a new story for the player

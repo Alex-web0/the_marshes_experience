@@ -439,12 +439,15 @@ class _GameContainerState extends State<GameContainer> {
               // 3.1. MUTE BUTTON (Main Menu)
               if (_showMenu && !_showTeamPage && !_showMultiplayerPage)
                 Positioned(
-                  bottom: 80,
+                  bottom:
+                      50, // Increased from 80 to avoid overlap on short screens
                   left: 0,
                   right: 0,
                   child: Center(
-                    child: MuteButton(
-                      onButtonSound: _game.playButtonSound,
+                    child: SafeArea(
+                      child: MuteButton(
+                        onButtonSound: _game.playButtonSound,
+                      ),
                     ),
                   ),
                 ),
@@ -485,7 +488,8 @@ class _GameContainerState extends State<GameContainer> {
               // 3.7. MUTE BUTTON (Pause Menu)
               if (_showPauseMenu)
                 Positioned(
-                  bottom: 80,
+                  bottom:
+                      140, // Increased from 80 to avoid overlap on short screens
                   left: 0,
                   right: 0,
                   child: Center(

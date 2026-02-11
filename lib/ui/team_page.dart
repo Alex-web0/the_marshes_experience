@@ -59,7 +59,7 @@ class _TeamPageState extends State<TeamPage> {
 
   Future<void> _loadTeamData() async {
     try {
-      final String response = await rootBundle.loadString('team.json');
+      final String response = await rootBundle.loadString('assets/team.json');
       final List<dynamic> data = json.decode(response);
       setState(() {
         _teamMembers = data.map((json) => TeamMember.fromJson(json)).toList();

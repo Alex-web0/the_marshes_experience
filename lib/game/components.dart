@@ -329,10 +329,13 @@ class StoryCollectible extends Collectible {
     );
 
     if (availableStories.isNotEmpty) {
-      // Pick a random available story
+      // Pick a random available story (prioritizes unviewed)
       final random = Random();
       final selectedStory =
           availableStories[random.nextInt(availableStories.length)];
+
+      // Mark story as viewed for rotation tracking
+      await storylineRepo.markStoryAsViewed(selectedStory.id);
 
       // Trigger the interactive storyline
       game.pauseForStoryline(selectedStory.id);
